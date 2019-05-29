@@ -1,4 +1,4 @@
-# Signal Conversation Archive Backup
+# signal-export
 Forked from https://github.com/mattsta/signal-backup  
 Use to extract messages from Signal desktop client.
 

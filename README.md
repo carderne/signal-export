@@ -10,18 +10,22 @@ cd signal-backup
 pip install -r requirements.txt
 ```
 
-Then use the script as follows:
+Then use the script as follows (script should automatically locate your Signal directory):
 ```
-Usage: scab.py [OPTIONS] SRC DST
+Usage: sigexport.py [OPTIONS] [DST]
 
-  Read the Signal directory SRC and output .json and .html files to DST.
+  Read the Signal directory and output .json and .html files to DST
+  directory. Assumes the following default directories, can be over-ridden
+  wtih --config.
 
-  Default Signal directories:  
-  - Linux: ~/.config/Signal  
-  - macOS: ~/Library/Application Support/Signal
+  Default Signal directories:
+   - Linux: ~/.config/Signal
+   - macOS: ~/Library/Application Support/Signal
+   - Windows: ~/AppData/Roaming/Signal
 
 Options:
-  --help  Show this message and exit.
+  -c, --config PATH  Path to Signal config and database
+  --help             Show this message and exit.
 ```
 
 Then either open the output html file in a browser, or do something with the JSON files.

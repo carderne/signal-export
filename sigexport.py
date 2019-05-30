@@ -35,7 +35,7 @@ def copy_attachments(src, dst, conversations, contacts):
 
     for key, messages in conversations.items():
         contact_path = dst / contacts[key]["name"]
-        contact_path.mkdir()
+        contact_path.mkdir(exist_ok=True)
         for msg in messages:
             attachments = msg["attachments"]
             timestamp = msg["timestamp"]
@@ -52,10 +52,10 @@ def make_simple(dst, conversations, contacts):
     """Output each conversation into a simple text file."""
 
     dst = Path(dst)
-    dst_attach = dst / "attachments"
 
     for key, messages in conversations.items():
-        fname = contacts[key]["name"] + ".md"
+        name = contacts[key]["name"]
+        fname = name + ".md"
         with open(dst / fname, "w") as f:
             for msg in messages:
                 timestamp = msg["timestamp"]
@@ -63,6 +63,8 @@ def make_simple(dst, conversations, contacts):
                     "%Y-%m-%d, %H-%M-%S"
                 )
                 body = msg["body"]
+                body = body if body else ""
+                body += "  "  # so that markdown newlines
                 attachments = msg["attachments"]
 
                 if msg["type"] == "outgoing":
@@ -78,7 +80,7 @@ def make_simple(dst, conversations, contacts):
                     body += "**attachments:** "
                 for att in attachments:
                     file_name = att["fileName"]
-                    path = Path("attachments") / file_name
+                    path = Path(name) / file_name
                     body += f" ![{file_name}]({path})"
                 print(f"[{date}] {sender} : {body}", file=f)
 
@@ -142,11 +144,12 @@ def fetch_data(db_file, key):
 
 
 @click.command()
+@click.argument("dst", type=click.Path(), default="output")
 @click.option(
     "--config", "-c", type=click.Path(), help="Path to Signal config and database"
 )
-@click.argument("dst", type=click.Path(), default="output")
-def main(dst, config=None):
+@click.option("--overwrite", "-o", is_flag=True, default=False)
+def main(dst, config=None, overwrite=False):
     """
     Read the Signal directory and output attachments and chat files to DST directory.
     Assumes the following default directories, can be over-ridden wtih --config.
@@ -168,7 +171,7 @@ def main(dst, config=None):
     dst = Path(dst).expanduser()
     if not dst.is_dir():
         dst.mkdir(parents=True)
-    else:
+    elif not overwrite:
         print("Output folder already exists, didn't do anything!")
         sys.exit(1)
 

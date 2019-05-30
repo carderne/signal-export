@@ -158,7 +158,7 @@ def fetch_data(db_file, key):
 def main(dst, config=None, overwrite=False):
     """
     Read the Signal directory and output attachments and chat files to DST directory.
-    Assumes the following default directories, can be over-ridden wtih --config.
+    Assumes the following default directories, can be overridden wtih --config.
 
     \b
     Default Signal directories:

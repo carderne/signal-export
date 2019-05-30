@@ -16,7 +16,7 @@ Then use the script as follows (script should automatically locate your Signal d
 Usage: sigexport.py [OPTIONS] [DST]
 
   Read the Signal directory and output attachments and chat files to DST
-  directory. Assumes the following default directories, can be over-ridden
+  directory. Assumes the following default directories, can be overridden
   wtih --config.
 
   Default Signal directories:

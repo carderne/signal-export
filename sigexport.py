@@ -60,7 +60,7 @@ def make_simple(dst, conversations, contacts):
             for msg in messages:
                 timestamp = msg["timestamp"]
                 date = datetime.fromtimestamp(timestamp / 1000.0).strftime(
-                    "%Y-%m-%d, %H-%M-%S"
+                    "%Y-%m-%d, %H:%M"
                 )
                 body = msg["body"]
                 body = body if body else ""

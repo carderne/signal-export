@@ -76,13 +76,14 @@ def make_simple(dst, conversations, contacts):
                         id = msg["source"]
                     sender = contacts[id]["name"]
 
-                if len(attachments) > 0:
-                    body += "**attachments:** "
                 for att in attachments:
                     file_name = att["fileName"]
                     path = Path(name) / file_name
-                    body += f" ![{file_name}]({path})"
-                print(f"[{date}] {sender} : {body}", file=f)
+                    path = Path(str(path).replace(" ", "%20"))
+                    if path.suffix in [".png", ".jpg", "jpeg", ".gif", ".tif", ".tiff"]:
+                        body += "!"
+                    body += f"[{file_name}](./{path})  "
+                print(f"[{date}] {sender}: {body}", file=f)
 
 
 def fetch_data(db_file, key):
@@ -143,6 +144,15 @@ def fetch_data(db_file, key):
     return convos, contacts
 
 
+def fix_names(contacts):
+    """Remove non-filesystem-friendly characters from names."""
+
+    for key, item in contacts.items():
+        contacts[key]["name"] = "".join(x for x in item["name"] if x.isalnum())
+
+    return contacts
+
+
 @click.command()
 @click.argument("dst", type=click.Path(), default="output")
 @click.option(
@@ -159,6 +169,8 @@ def main(dst, config=None, overwrite=False):
     """
     Read the Signal directory and output attachments and chat files to DST directory.
     Assumes the following default directories, can be overridden wtih --config.
+
+    Deafault for DST is a sub-directory output/ in the current directory.
 
     \b
     Default Signal directories:
@@ -190,6 +202,7 @@ def main(dst, config=None, overwrite=False):
         sys.exit(1)
 
     convos, contacts = fetch_data(db_file, key)
+    contacts = fix_names(contacts)
     convos = copy_attachments(src, dst, convos, contacts)
     make_simple(dst, convos, contacts)
 

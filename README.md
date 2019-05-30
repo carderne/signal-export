@@ -1,5 +1,5 @@
 # signal-export
-Export your Signal chats to markdown files with attachments. Each chat is exported as an individual .md file and the attachments for each are stored in a separate folder. Attachments are linked from the markdown files and can be previewed with something like [grip](https://github.com/joeyespo/grip).
+Export your Signal chats to markdown files with attachments. Each chat is exported as an individual .md file and the attachments for each are stored in a separate folder. Attachments are linked from the markdown files and can be previewed with something like [grip](https://github.com/joeyespo/grip) or [Typora](https://typora.io/).
 
 Forked from https://github.com/mattsta/signal-backup
 
@@ -19,6 +19,8 @@ Usage: sigexport.py [OPTIONS] [DST]
   directory. Assumes the following default directories, can be overridden
   wtih --config.
 
+  Deafault for DST is a sub-directory output/ in the current directory.
+
   Default Signal directories:
    - Linux: ~/.config/Signal
    - macOS: ~/Library/Application Support/Signal
@@ -31,7 +33,7 @@ Options:
 ```
 
 ## Troubleshooting
-If you run into issues with `pysqlcipher3`, do as follows to fix:
+If you run into issues with `pysqlcipher3` on Ubuntu/Linux, do as follows to fix:
 ```
 sudo apt update
 sudo apt install libsqlcipher-dev

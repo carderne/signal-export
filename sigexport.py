@@ -148,7 +148,13 @@ def fetch_data(db_file, key):
 @click.option(
     "--config", "-c", type=click.Path(), help="Path to Signal config and database"
 )
-@click.option("--overwrite", "-o", is_flag=True, default=False)
+@click.option(
+    "--overwrite",
+    "-o",
+    is_flag=True,
+    default=False,
+    help="Flag to overwrite existing output",
+)
 def main(dst, config=None, overwrite=False):
     """
     Read the Signal directory and output attachments and chat files to DST directory.

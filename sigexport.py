@@ -13,6 +13,7 @@ from pysqlcipher3 import dbapi2 as sqlcipher
 
 def config_location():
     """Get OS-dependent config location."""
+
     home = Path.home()
     if sys.platform == "linux" or sys.platform == "linux2":
         config_path = home / ".config/Signal"
@@ -80,7 +81,14 @@ def make_simple(dst, conversations, contacts):
                     file_name = att["fileName"]
                     path = Path(name) / file_name
                     path = Path(str(path).replace(" ", "%20"))
-                    if path.suffix in [".png", ".jpg", "jpeg", ".gif", ".tif", ".tiff"]:
+                    if path.suffix.split(".")[1] in [
+                        "png",
+                        "jpg",
+                        "jpeg",
+                        "gif",
+                        "tif",
+                        "tiff",
+                    ]:
                         body += "!"
                     body += f"[{file_name}](./{path})  "
                 print(f"[{date}] {sender}: {body}", file=f)
@@ -106,40 +114,35 @@ def fetch_data(db_file, key):
 
     c.execute("SELECT json, id, name, profileName, type, members FROM conversations")
     for result in c:
-        cId = result[1]
-        isGroup = result[4] == "group"
-        contacts[cId] = {
+        cid = result[1]
+        is_group = result[4] == "group"
+        contacts[cid] = {
             "id": result[1],
             "name": result[2],
             "profileName": result[3],
-            "isGroup": isGroup,
+            "is_group": is_group,
         }
-        convos[cId] = []
+        convos[cid] = []
 
-        if isGroup:
-            usableMembers = []
-            # Match group members from ID (phone number) back to real
+        if is_group:
+            usable_members = []
+            # Match group members from phone number to name
             for member in result[5].split():
                 c2.execute(
                     "SELECT name, profileName FROM conversations WHERE id=?", [member]
                 )
                 for name in c2:
-                    useName = name[0] if name else member
-                    usableMembers.append(useName)
-
-            contacts[cId]["members"] = usableMembers
+                    usable_members.append(name[0] if name else member)
+            contacts[cid]["members"] = usable_members
 
     c.execute(
         "SELECT json, conversationId, sent_at, received_at FROM messages ORDER BY sent_at"
     )
-    messages = []
     for result in c:
         content = json.loads(result[0])
-        cId = result[1]
-        if not cId:
-            # Signal's data model isn't as stable as one would imagine
-            continue
-        convos[cId].append(content)
+        cid = result[1]
+        if cid:
+            convos[cid].append(content)
 
     return convos, contacts
 

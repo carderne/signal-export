@@ -19,37 +19,31 @@ def config_location():
     elif sys.platform == "darwin":
         config_path = home / "Library/Application Support/Signal"
     elif sys.platform == "win32":
-        config_path = path / "AppData\Roaming\Signal"
+        config_path = path / "AppData/Roaming/Signal"
     else:
-        print("Please manually enter Signal config location.")
+        print("Please manually enter Signal location using --config.")
         sys.exit(1)
 
     return config_path
 
 
-def copy_attachments(src, dst, conversations):
+def copy_attachments(src, dst, conversations, contacts):
     """Copy attachments and reorganise in destination directory."""
-    src = Path(src)
+
+    src_att = Path(src) / "attachments.noindex"
     dst = Path(dst)
-    dst_thumb = dst / "thumb"
-    if dst.is_dir():
-        shutil.rmtree(dst)
-    dst_thumb.mkdir(parents=True)
 
     for key, messages in conversations.items():
+        contact_path = dst / contacts[key]["name"]
+        contact_path.mkdir()
         for msg in messages:
             attachments = msg["attachments"]
-            if len(attachments) > 0:
-                timestamp = msg["timestamp"]
-                date = datetime.fromtimestamp(timestamp / 1000.0).strftime("%Y-%m-%d")
-                for att in attachments:
-                    file_name = date + "_" + att["fileName"]
-                    att["fileName"] = file_name
-                    shutil.copy2(src / att["path"], dst / file_name)
-                    if "thumbnail" in att:
-                        shutil.copy2(
-                            src / att["thumbnail"]["path"], dst_thumb / file_name
-                        )
+            timestamp = msg["timestamp"]
+            date = datetime.fromtimestamp(timestamp / 1000.0).strftime("%Y-%m-%d")
+            for att in attachments:
+                file_name = date + "_" + att["fileName"]
+                att["fileName"] = file_name
+                shutil.copy2(src_att / att["path"], contact_path / file_name)
 
     return conversations
 
@@ -58,13 +52,11 @@ def make_simple(dst, conversations, contacts):
     """Output each conversation into a simple text file."""
 
     dst = Path(dst)
-    if dst.is_dir():
-        shutil.rmtree(dst)
-    dst.mkdir(parents=True)
+    dst_attach = dst / "attachments"
 
     for key, messages in conversations.items():
-        fname = dst / contacts[key]["name"]
-        with open(fname, "w") as f:
+        fname = contacts[key]["name"] + ".md"
+        with open(dst / fname, "w") as f:
             for msg in messages:
                 timestamp = msg["timestamp"]
                 date = datetime.fromtimestamp(timestamp / 1000.0).strftime(
@@ -81,8 +73,13 @@ def make_simple(dst, conversations, contacts):
                     except ValueError:
                         id = msg["source"]
                     sender = contacts[id]["name"]
+
                 if len(attachments) > 0:
-                    body = f"[attachments] {body}"
+                    body += "**attachments:** "
+                for att in attachments:
+                    file_name = att["fileName"]
+                    path = Path("attachments") / file_name
+                    body += f" ![{file_name}]({path})"
                 print(f"[{date}] {sender} : {body}", file=f)
 
 
@@ -93,7 +90,7 @@ def make_simple(dst, conversations, contacts):
 @click.argument("dst", type=click.Path(), default="output")
 def export(dst, config=None):
     """
-    Read the Signal directory and output .json and .html files to DST directory.
+    Read the Signal directory and output attachments and chat files to DST directory.
     Assumes the following default directories, can be over-ridden wtih --config.
 
     \b
@@ -109,18 +106,12 @@ def export(dst, config=None):
         src = config_location()
     config = src / "config.json"
     db_file = src / "sql" / "db.sqlite"
-    html_in = Path(os.path.dirname(os.path.abspath(__file__))) / "chattr.html"
 
     dst = Path(dst).expanduser()
     if dst.is_dir():
         print("Output folder already exists, didn't do anything!")
         sys.exit(1)
     dst.mkdir(parents=True)
-    cont = dst / "contacts.json"
-    conv = dst / "conversations.json"
-    html = dst / "conversations.html"
-    attachments = dst / "attachments"
-    simple = dst / "simple"
 
     # Read sqlcipher key from Signal config file
     try:
@@ -187,28 +178,8 @@ def export(dst, config=None):
             continue
         convos[cId].append(content)
 
-    convos = copy_attachments(src / "attachments.noindex", attachments, convos)
-    make_simple(simple, convos, contacts)
-
-    with open(cont, "w") as con:
-        json.dump(contacts, con)
-        contactsJSON = json.dumps(contacts)
-
-    with open(conv, "w") as ampc:
-        json.dump(convos, ampc)
-        convosJSON = json.dumps(convos)
-
-    # Create end result of interactive HTML interface with embedded and formatted
-    # chat history for all contacts/conversations.
-    with open(html_in, "r") as chattr:
-        newChat = chattr.read()
-        updated = newChat.replace(
-            "JSONINSERTHERE",
-            f"var contacts = {contactsJSON}; var convos = {convosJSON};",
-        )
-
-        with open(html, "w") as mine:
-            mine.write(updated)
+    convos = copy_attachments(src, dst, convos, contacts)
+    make_simple(dst, convos, contacts)
 
     print(f"Done! Files exported to {dst}.")
 

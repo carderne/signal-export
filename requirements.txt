@@ -1,1 +1,2 @@
 pysqlcipher3
+click

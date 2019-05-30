@@ -28,8 +28,6 @@ Options:
   --help             Show this message and exit.
 ```
 
-Then either open the output html file in a browser, or do something with the JSON files.
-
 ## Troubleshooting
 If you run into issues with `pysqlcipher3`, do as follows to fix:
 ```

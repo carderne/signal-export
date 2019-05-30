@@ -1,7 +1,19 @@
 # signal-export
-Export your Signal chats to markdown files with attachments. Each chat is exported as an individual .md file and the attachments for each are stored in a separate folder. Attachments are linked from the markdown files and can be previewed with something like [grip](https://github.com/joeyespo/grip) or [Typora](https://typora.io/).
+Export chats from the [Signal](https://www.signal.org/) [Desktop app](https://www.signal.org/download/) to markdown files with attachments. Each chat is exported as an individual .md file and the attachments for each are stored in a separate folder. Attachments are linked from the markdown files and can be previewed with something like [grip](https://github.com/joeyespo/grip) or [Typora](https://typora.io/).
+
+Currently this seems to be the only way to get chat history out of Signal.
 
 Forked from https://github.com/mattsta/signal-backup
+
+## Example
+An export for a group conversation looks as follows:
+```markdown
+[2019-05-29, 15:04] Me: How is everyone?
+[2019-05-29, 15:10] Aya: We're great!
+[2019-05-29, 15:20] Jim: I'm not.
+```
+
+Images are attached inline with `![name](path)` while other attachments (voice notes, videos, documents) are included as links like `[name](path)` so a click will take you to the file.
 
 ## Usage
 First clone and install requirements (preferably into a virtualenv):

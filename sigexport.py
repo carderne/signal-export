@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import json
-import os
 import sys
+import os
 import shutil
 from pathlib import Path
 from datetime import datetime
@@ -20,7 +20,7 @@ def config_location():
     elif sys.platform == "darwin":
         config_path = home / "Library/Application Support/Signal"
     elif sys.platform == "win32":
-        config_path = path / "AppData/Roaming/Signal"
+        config_path = home / "AppData/Roaming/Signal"
     else:
         print("Please manually enter Signal location using --config.")
         sys.exit(1)
@@ -39,12 +39,17 @@ def copy_attachments(src, dst, conversations, contacts):
         contact_path.mkdir(exist_ok=True)
         for msg in messages:
             attachments = msg["attachments"]
-            timestamp = msg["timestamp"]
-            date = datetime.fromtimestamp(timestamp / 1000.0).strftime("%Y-%m-%d")
-            for att in attachments:
-                file_name = date + "_" + att["fileName"]
-                att["fileName"] = file_name
-                shutil.copy2(src_att / att["path"], contact_path / file_name)
+            if attachments:
+                date = datetime.fromtimestamp(msg["timestamp"] / 1000.0).strftime(
+                    "%Y-%m-%d"
+                )
+                for att in attachments:
+                    try:
+                        file_name = f"{date}_{att['fileName']}"
+                        att["fileName"] = file_name
+                        shutil.copy2(src_att / att["path"], contact_path / file_name)
+                    except KeyError:
+                        print(f"Failed attachment:\t{att['fileName']}")
 
     return conversations
 
@@ -59,12 +64,20 @@ def make_simple(dst, conversations, contacts):
         fname = name + ".md"
         with open(dst / fname, "w") as f:
             for msg in messages:
-                timestamp = msg["timestamp"]
+                try:
+                    timestamp = msg["timestamp"]
+                except KeyError:
+                    timestamp = msg["sent_at"]
+                    print(f"No timestamp; use sent_at")
                 date = datetime.fromtimestamp(timestamp / 1000.0).strftime(
                     "%Y-%m-%d, %H:%M"
                 )
-                body = msg["body"]
+                try:
+                    body = msg["body"]
+                except KeyError:
+                    print(f"No body:\t\t{date}")
                 body = body if body else ""
+                body = body.replace("`", "")  # stop md code sections forming
                 body += "  "  # so that markdown newlines
                 attachments = msg["attachments"]
 
@@ -72,16 +85,20 @@ def make_simple(dst, conversations, contacts):
                     sender = "Me"
                 else:
                     try:
-                        id = int(msg["source"][1:])
-                    except ValueError:
-                        id = msg["source"]
-                    sender = contacts[id]["name"]
+                        try:
+                            id = int(msg["source"][1:])
+                        except ValueError:
+                            id = msg["source"]
+                        sender = contacts[id]["name"]
+                    except KeyError:
+                        print(f"No sender:\t\t{date}")
+                        sender = "No-Sender"
 
                 for att in attachments:
                     file_name = att["fileName"]
                     path = Path(name) / file_name
                     path = Path(str(path).replace(" ", "%20"))
-                    if path.suffix.split(".")[1] in [
+                    if path.suffix and path.suffix.split(".")[1] in [
                         "png",
                         "jpg",
                         "jpeg",
@@ -94,23 +111,39 @@ def make_simple(dst, conversations, contacts):
                 print(f"[{date}] {sender}: {body}", file=f)
 
 
-def fetch_data(db_file, key):
+def fetch_data(db_file, key, manual=False):
     """Load SQLite data into dicts."""
 
     contacts = {}
     convos = {}
 
-    db = sqlcipher.connect(str(db_file))
-    c = db.cursor()
-    c2 = db.cursor()
-
-    # param binding doesn't work for pragmas, so use a direct string concat
-    for cursor in [c, c2]:
-        cursor.execute(f"PRAGMA KEY = \"x'{key}'\"")
-        cursor.execute(f"PRAGMA cipher_page_size = 1024")
-        cursor.execute(f"PRAGMA kdf_iter = 64000")
-        cursor.execute(f"PRAGMA cipher_hmac_algorithm = HMAC_SHA1")
-        cursor.execute(f"PRAGMA cipher_kdf_algorithm = PBKDF2_HMAC_SHA1")
+    db_file_decrypted = db_file.parents[0] / "db-decrypt.sqlite"
+    if manual:
+        if db_file_decrypted.exists():
+            db_file_decrypted.unlink()
+        command = (
+            f'echo "'
+            f"PRAGMA key = \\\"x'{key}'\\\";"
+            f"ATTACH DATABASE '{db_file_decrypted}' AS plaintext KEY '';"
+            f"SELECT sqlcipher_export('plaintext');"
+            f"DETACH DATABASE plaintext;"
+            f'" | sqlcipher {db_file}'
+        )
+        os.system(command)
+        db = sqlcipher.connect(str(db_file_decrypted))
+        c = db.cursor()
+        c2 = db.cursor()
+    else:
+        db = sqlcipher.connect(str(db_file))
+        c = db.cursor()
+        c2 = db.cursor()
+        # param binding doesn't work for pragmas, so use a direct string concat
+        for cursor in [c, c2]:
+            cursor.execute(f"PRAGMA KEY = \"x'{key}'\"")
+            cursor.execute(f"PRAGMA cipher_page_size = 1024")
+            cursor.execute(f"PRAGMA kdf_iter = 64000")
+            cursor.execute(f"PRAGMA cipher_hmac_algorithm = HMAC_SHA1")
+            cursor.execute(f"PRAGMA cipher_kdf_algorithm = PBKDF2_HMAC_SHA1")
 
     c.execute("SELECT json, id, name, profileName, type, members FROM conversations")
     for result in c:
@@ -144,6 +177,9 @@ def fetch_data(db_file, key):
         if cid:
             convos[cid].append(content)
 
+    if db_file_decrypted.exists():
+        db_file_decrypted.unlink()
+
     return convos, contacts
 
 
@@ -168,7 +204,14 @@ def fix_names(contacts):
     default=False,
     help="Flag to overwrite existing output",
 )
-def main(dst, config=None, overwrite=False):
+@click.option(
+    "--manual",
+    "-m",
+    is_flag=True,
+    default=False,
+    help="Whether to manually decrypt the db",
+)
+def main(dst, config=None, overwrite=False, manual=False):
     """
     Read the Signal directory and output attachments and chat files to DST directory.
     Assumes the following default directories, can be overridden wtih --config.
@@ -204,12 +247,12 @@ def main(dst, config=None, overwrite=False):
         print(f"Error: {config} not found in directory {src}")
         sys.exit(1)
 
-    convos, contacts = fetch_data(db_file, key)
+    convos, contacts = fetch_data(db_file, key, manual=manual)
     contacts = fix_names(contacts)
     convos = copy_attachments(src, dst, convos, contacts)
     make_simple(dst, convos, contacts)
 
-    print(f"Done! Files exported to {dst}.")
+    print(f"\nDone! Files exported to {dst}.")
 
 
 if __name__ == "__main__":

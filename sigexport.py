@@ -11,31 +11,31 @@ import click
 from pysqlcipher3 import dbapi2 as sqlcipher
 
 
-def config_location():
-    """Get OS-dependent config location."""
+def source_location():
+    """Get OS-dependent source location."""
 
     home = Path.home()
     if sys.platform == "linux" or sys.platform == "linux2":
-        config_path = home / ".config/Signal"
+        source_path = home / ".config/Signal"
     elif sys.platform == "darwin":
-        config_path = home / "Library/Application Support/Signal"
+        source_path = home / "Library/Application Support/Signal"
     elif sys.platform == "win32":
-        config_path = home / "AppData/Roaming/Signal"
+        source_path = home / "AppData/Roaming/Signal"
     else:
-        print("Please manually enter Signal location using --config.")
+        print("Please manually enter Signal location using --source.")
         sys.exit(1)
 
-    return config_path
+    return source_path
 
 
-def copy_attachments(src, dst, conversations, contacts):
+def copy_attachments(src, dest, conversations, contacts):
     """Copy attachments and reorganise in destination directory."""
 
     src_att = Path(src) / "attachments.noindex"
-    dst = Path(dst)
+    dest = Path(dest)
 
     for key, messages in conversations.items():
-        contact_path = dst / contacts[key]["name"]
+        contact_path = dest / contacts[key]["name"]
         contact_path.mkdir(exist_ok=True)
         for msg in messages:
             attachments = msg["attachments"]
@@ -54,21 +54,21 @@ def copy_attachments(src, dst, conversations, contacts):
     return conversations
 
 
-def make_simple(dst, conversations, contacts):
+def make_simple(dest, conversations, contacts):
     """Output each conversation into a simple text file."""
 
-    dst = Path(dst)
+    dest = Path(dest)
 
     for key, messages in conversations.items():
         name = contacts[key]["name"]
         fname = name + ".md"
-        with open(dst / fname, "w") as f:
+        with open(dest / fname, "w") as f:
             for msg in messages:
                 try:
                     timestamp = msg["timestamp"]
                 except KeyError:
                     timestamp = msg["sent_at"]
-                    print(f"No timestamp; use sent_at")
+                    print("No timestamp; use sent_at")
                 date = datetime.fromtimestamp(timestamp / 1000.0).strftime(
                     "%Y-%m-%d, %H:%M"
                 )
@@ -85,10 +85,7 @@ def make_simple(dst, conversations, contacts):
                     sender = "Me"
                 else:
                     try:
-                        try:
-                            id = int(msg["source"][1:])
-                        except ValueError:
-                            id = msg["source"]
+                        id = msg["conversationId"]
                         sender = contacts[id]["name"]
                     except KeyError:
                         print(f"No sender:\t\t{date}")
@@ -140,10 +137,10 @@ def fetch_data(db_file, key, manual=False):
         # param binding doesn't work for pragmas, so use a direct string concat
         for cursor in [c, c2]:
             cursor.execute(f"PRAGMA KEY = \"x'{key}'\"")
-            cursor.execute(f"PRAGMA cipher_page_size = 1024")
-            cursor.execute(f"PRAGMA kdf_iter = 64000")
-            cursor.execute(f"PRAGMA cipher_hmac_algorithm = HMAC_SHA1")
-            cursor.execute(f"PRAGMA cipher_kdf_algorithm = PBKDF2_HMAC_SHA1")
+            cursor.execute("PRAGMA cipher_page_size = 1024")
+            cursor.execute("PRAGMA kdf_iter = 64000")
+            cursor.execute("PRAGMA cipher_hmac_algorithm = HMAC_SHA1")
+            cursor.execute("PRAGMA cipher_kdf_algorithm = PBKDF2_HMAC_SHA1")
 
     c.execute("SELECT json, id, name, profileName, type, members FROM conversations")
     for result in c:
@@ -155,6 +152,8 @@ def fetch_data(db_file, key, manual=False):
             "profileName": result[3],
             "is_group": is_group,
         }
+        if contacts[cid]["name"] is None:
+            contacts[cid]["name"] = contacts[cid]["profileName"]
         convos[cid] = []
 
         if is_group:
@@ -169,7 +168,9 @@ def fetch_data(db_file, key, manual=False):
             contacts[cid]["members"] = usable_members
 
     c.execute(
-        "SELECT json, conversationId, sent_at, received_at FROM messages ORDER BY sent_at"
+        "SELECT json, conversationId, sent_at, received_at "
+        "FROM messages "
+        "ORDER BY sent_at"
     )
     for result in c:
         content = json.loads(result[0])
@@ -193,9 +194,9 @@ def fix_names(contacts):
 
 
 @click.command()
-@click.argument("dst", type=click.Path(), default="output")
+@click.argument("dest", type=click.Path())
 @click.option(
-    "--config", "-c", type=click.Path(), help="Path to Signal config and database"
+    "--source", "-s", type=click.Path(), help="Path to Signal source and database"
 )
 @click.option(
     "--overwrite",
@@ -211,12 +212,12 @@ def fix_names(contacts):
     default=False,
     help="Whether to manually decrypt the db",
 )
-def main(dst, config=None, overwrite=False, manual=False):
+def main(dest, source=None, overwrite=False, manual=False):
     """
-    Read the Signal directory and output attachments and chat files to DST directory.
-    Assumes the following default directories, can be overridden wtih --config.
+    Read the Signal directory and output attachments and chat files to DEST directory.
+    Assumes the following default directories, can be overridden wtih --source.
 
-    Deafault for DST is a sub-directory output/ in the current directory.
+    Deafault for DEST is a sub-directory output/ in the current directory.
 
     \b
     Default Signal directories:
@@ -225,34 +226,35 @@ def main(dst, config=None, overwrite=False, manual=False):
      - Windows: ~/AppData/Roaming/Signal
     """
 
-    if config:
-        src = Path(config)
+    if source:
+        src = Path(source)
     else:
-        src = config_location()
-    config = src / "config.json"
+        src = source_location()
+    source = src / "config.json"
     db_file = src / "sql" / "db.sqlite"
 
-    dst = Path(dst).expanduser()
-    if not dst.is_dir():
-        dst.mkdir(parents=True)
+    dest = Path(dest).expanduser()
+    if not dest.is_dir():
+        dest.mkdir(parents=True)
     elif not overwrite:
         print("Output folder already exists, didn't do anything!")
+        print("Use --overwrite to ignore existing directory.")
         sys.exit(1)
 
     # Read sqlcipher key from Signal config file
-    if config.is_file():
-        with open(config, "r") as conf:
+    if source.is_file():
+        with open(source, "r") as conf:
             key = json.loads(conf.read())["key"]
     else:
-        print(f"Error: {config} not found in directory {src}")
+        print(f"Error: {source} not found in directory {src}")
         sys.exit(1)
 
     convos, contacts = fetch_data(db_file, key, manual=manual)
     contacts = fix_names(contacts)
-    convos = copy_attachments(src, dst, convos, contacts)
-    make_simple(dst, convos, contacts)
+    convos = copy_attachments(src, dest, convos, contacts)
+    make_simple(dest, convos, contacts)
 
-    print(f"\nDone! Files exported to {dst}.")
+    print(f"\nDone! Files exported to {dest}.")
 
 
 if __name__ == "__main__":

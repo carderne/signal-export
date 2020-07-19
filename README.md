@@ -23,27 +23,29 @@ cd signal-export
 pip install -r requirements.txt
 ```
 
-Then use the script as follows (script should automatically locate your Signal directory):
+Then use the script as follows:
 ```
-Usage: ./sigexport.py [OPTIONS] [DST]
-
-  Read the Signal directory and output attachments and chat files to DST
-  directory. Assumes the following default directories, can be overridden
-  wtih --config.
-
-  Deafault for DST is a sub-directory output/ in the current directory.
-
-  Default Signal directories:
-   - Linux: ~/.config/Signal
-   - macOS: ~/Library/Application Support/Signal
-   - Windows: ~/AppData/Roaming/Signal
+Usage: ./sigexport.py [OPTIONS] [DEST]
 
 Options:
-  -c, --config PATH  Path to Signal config and database
+  -s, --source PATH  Path to Signal config and database
   -o, --overwrite    Flag to overwrite existing output
   -m, --manual       Flag to manually decrypt the database
   --help             Show this message and exit.
 ```
+
+This will attempt to find default Signal config location location for your OS and export to the given directory:
+```
+./sigexport.py exported
+```
+
+Add `--overwrite` to overwrite output files.
+
+You can use `--source /path/to/source/files` if the script doesn't manage to find it. Default locations per OS:
+- Linux: `~/.config/Signal`
+- macOS: `~/Library/Application Support/Signal`
+- Windows: `~/AppData/Roaming/Signal`
+
 
 ## Troubleshooting
 If you run into issues with `pysqlcipher3` on Ubuntu/Linux (e.g. you get the error `pysqlcipher3.dbapi2.DatabaseError: file is encrypted or is not a database`) then do the following:
@@ -56,22 +58,27 @@ cd pysqlcipher3
 python setup.py install
 ```
 
-If you **stil** get issues, then we need to do manually decrypt the database. The following should work to get sqlcipher manually installed (from [this](https://stackoverflow.com/a/25132478) SO answer):
+And then try the script again
 ```
-sudo apt remove sqlcipher
-sudo apt install libssl-dev
+./sigexport.py --overwrite exported
 ```
 
-Then clone [sqlcipher](https://github.com/sqlcipher/sqlcipher) somewhere and install it:
+## Still not working?
+If you **stil** get issues, then we need to do manually decrypt the database. The following should work to get sqlcipher manually installed (from [this](https://stackoverflow.com/a/25132478) StackOverflow answer):
 ```
-cd ~/Downloads
+sudo apt remove sqlcipher
+```
+
+Then clone [sqlcipher](https://github.com/sqlcipher/sqlcipher) and install it:
+```
 git clone https://github.com/sqlcipher/sqlcipher.git
+cd sqlcipher
 mkdir build && cd build
-../sqlcipher/configure --enable-tempstore=yes CFLAGS="-DSQLITE_HAS_CODEC" LDFLAGS="-lcrypto";
-make install
+../configure --enable-tempstore=yes CFLAGS="-DSQLITE_HAS_CODEC" LDFLAGS="-lcrypto"
+sudo make install
 ```
 
 Then rerun the tool as follows. This will manually decrypt the database to a `db-decrypted.sqlite` file and use that to create the export (the decrypted database is deleted afterwards).
 ```
-./sigexport.py --overwrite --manual
+./sigexport.py --overwrite --manual exported
 ```

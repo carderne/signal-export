@@ -1,2 +1,2 @@
-pysqlcipher3
-click
+Click==7.0
+pysqlcipher3==1.0.3

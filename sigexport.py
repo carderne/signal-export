@@ -35,8 +35,8 @@ def copy_attachments(src, dest, conversations, contacts):
     dest = Path(dest)
 
     for key, messages in conversations.items():
-        contact_path = dest / contacts[key]["name"]
-        contact_path.mkdir(exist_ok=True)
+        contact_path = dest / contacts[key]["name"] / "media"
+        contact_path.mkdir(exist_ok=True, parents=True)
         for msg in messages:
             attachments = msg["attachments"]
             if attachments:
@@ -61,8 +61,8 @@ def make_simple(dest, conversations, contacts):
 
     for key, messages in conversations.items():
         name = contacts[key]["name"]
-        fname = name + ".md"
-        with open(dest / fname, "w") as f:
+        is_group = contacts[key]["is_group"]
+        with open(dest / name / "index.md", "w") as f:
             for msg in messages:
                 try:
                     timestamp = msg["timestamp"]
@@ -85,15 +85,20 @@ def make_simple(dest, conversations, contacts):
                     sender = "Me"
                 else:
                     try:
-                        id = msg["conversationId"]
-                        sender = contacts[id]["name"]
+                        if is_group:
+                            for c in contacts.values():
+                                num = c["number"]
+                                if num is not None and num == msg["source"]:
+                                    sender = c["name"]
+                        else:
+                            sender = contacts[msg["conversationId"]]["name"]
                     except KeyError:
                         print(f"No sender:\t\t{date}")
                         sender = "No-Sender"
 
                 for att in attachments:
                     file_name = att["fileName"]
-                    path = Path(name) / file_name
+                    path = Path("media") / file_name
                     path = Path(str(path).replace(" ", "%20"))
                     if path.suffix and path.suffix.split(".")[1] in [
                         "png",
@@ -142,14 +147,19 @@ def fetch_data(db_file, key, manual=False):
             cursor.execute("PRAGMA cipher_hmac_algorithm = HMAC_SHA1")
             cursor.execute("PRAGMA cipher_kdf_algorithm = PBKDF2_HMAC_SHA1")
 
-    c.execute("SELECT json, id, name, profileName, type, members FROM conversations")
+    # c.execute("PRAGMA table_info(messages);")
+    # for r in c: print(r)
+    # breakpoint()
+
+    c.execute("SELECT type, id, e164, name, profileName, members FROM conversations")
     for result in c:
+        is_group = result[0] == "group"
         cid = result[1]
-        is_group = result[4] == "group"
         contacts[cid] = {
-            "id": result[1],
-            "name": result[2],
-            "profileName": result[3],
+            "id": cid,
+            "name": result[3],
+            "number": result[2],
+            "profileName": result[4],
             "is_group": is_group,
         }
         if contacts[cid]["name"] is None:
@@ -167,11 +177,7 @@ def fetch_data(db_file, key, manual=False):
                     usable_members.append(name[0] if name else member)
             contacts[cid]["members"] = usable_members
 
-    c.execute(
-        "SELECT json, conversationId, sent_at, received_at "
-        "FROM messages "
-        "ORDER BY sent_at"
-    )
+    c.execute("SELECT json, conversationId " "FROM messages " "ORDER BY sent_at")
     for result in c:
         content = json.loads(result[0])
         cid = result[1]

@@ -82,3 +82,7 @@ Then rerun the tool as follows. This will manually decrypt the database to a `db
 ```
 ./sigexport.py --overwrite --manual exported
 ```
+
+## TODO
+- [ ] Better way to merge with previous experts. Could [potentially use](https://stackoverflow.com/a/6297993) `sort -k1.1,2.6 -u`, except in long messages there are lines without datetime stamps, so it breaks. Probably need Python solution, that considers subsequent lines as part of that line.
+- [ ] Html output: header, basic stylesheet, inline videos and voice notes. Should be a post-proc step after markdown. Each line that starts with `[` gets a or something, format date nicely etc.

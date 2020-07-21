@@ -10,6 +10,8 @@ from datetime import datetime
 import click
 from pysqlcipher3 import dbapi2 as sqlcipher
 
+from style import style
+
 
 def source_location():
     """Get OS-dependent source location."""
@@ -35,7 +37,8 @@ def copy_attachments(src, dest, conversations, contacts):
     dest = Path(dest)
 
     for key, messages in conversations.items():
-        contact_path = dest / contacts[key]["name"] / "media"
+        name = contacts[key]["name"]
+        contact_path = dest / name / "media"
         contact_path.mkdir(exist_ok=True, parents=True)
         for msg in messages:
             attachments = msg["attachments"]
@@ -49,7 +52,9 @@ def copy_attachments(src, dest, conversations, contacts):
                         att["fileName"] = file_name
                         shutil.copy2(src_att / att["path"], contact_path / file_name)
                     except KeyError:
-                        print(f"Failed attachment:\t{att['fileName']}")
+                        print(f"Broken attachment:\t{name}\t{att['fileName']}")
+                    except FileNotFoundError:
+                        print(f"Attachment not found:\t{name}\t{att['fileName']}")
 
     return conversations
 
@@ -58,59 +63,78 @@ def make_simple(dest, conversations, contacts):
     """Output each conversation into a simple text file."""
 
     dest = Path(dest)
+    with open(dest / "style.css", "w") as stylefile:
+        print(style, file=stylefile)
 
     for key, messages in conversations.items():
         name = contacts[key]["name"]
         is_group = contacts[key]["is_group"]
-        with open(dest / name / "index.md", "w") as f:
-            for msg in messages:
-                try:
-                    timestamp = msg["timestamp"]
-                except KeyError:
-                    timestamp = msg["sent_at"]
-                    print("No timestamp; use sent_at")
-                date = datetime.fromtimestamp(timestamp / 1000.0).strftime(
-                    "%Y-%m-%d, %H:%M"
-                )
-                try:
-                    body = msg["body"]
-                except KeyError:
-                    print(f"No body:\t\t{date}")
-                body = body if body else ""
-                body = body.replace("`", "")  # stop md code sections forming
-                body += "  "  # so that markdown newlines
-                attachments = msg["attachments"]
+        mdfile = open(dest / name / "index.md", "w")
+        htfile = open(dest / name / "index.html", "w")
+        print(
+            "<!doctype html>"
+            "<html><head>"
+            f"<title>{name}</title>"
+            "<link rel=stylesheet href='../style.css'>"
+            "</head>"
+            "<body>"
+            f"<h1>{name}</h1>",
+            file=htfile,
+        )
 
-                if msg["type"] == "outgoing":
-                    sender = "Me"
-                else:
-                    try:
-                        if is_group:
-                            for c in contacts.values():
-                                num = c["number"]
-                                if num is not None and num == msg["source"]:
-                                    sender = c["name"]
-                        else:
-                            sender = contacts[msg["conversationId"]]["name"]
-                    except KeyError:
-                        print(f"No sender:\t\t{date}")
-                        sender = "No-Sender"
+        for msg in messages:
+            try:
+                timestamp = msg["timestamp"]
+            except KeyError:
+                timestamp = msg["sent_at"]
+                print("No timestamp; use sent_at")
+            date = datetime.fromtimestamp(timestamp / 1000.0).strftime("%Y-%m-%d %H:%M")
+            try:
+                body = msg["body"]
+            except KeyError:
+                print(f"No body:\t\t{date}")
+            body = body if body else ""
+            body = body.replace("`", "")  # stop md code sections forming
+            body += "  "  # so that markdown newlines
+            attachments = msg["attachments"]
 
-                for att in attachments:
-                    file_name = att["fileName"]
-                    path = Path("media") / file_name
-                    path = Path(str(path).replace(" ", "%20"))
-                    if path.suffix and path.suffix.split(".")[1] in [
-                        "png",
-                        "jpg",
-                        "jpeg",
-                        "gif",
-                        "tif",
-                        "tiff",
-                    ]:
-                        body += "!"
-                    body += f"[{file_name}](./{path})  "
-                print(f"[{date}] {sender}: {body}", file=f)
+            if msg["type"] == "outgoing":
+                sender = "Me"
+            else:
+                try:
+                    if is_group:
+                        for c in contacts.values():
+                            num = c["number"]
+                            if num is not None and num == msg["source"]:
+                                sender = c["name"]
+                    else:
+                        sender = contacts[msg["conversationId"]]["name"]
+                except KeyError:
+                    print(f"No sender:\t\t{date}")
+                    sender = "No-Sender"
+
+            for att in attachments:
+                file_name = att["fileName"]
+                path = Path("media") / file_name
+                path = Path(str(path).replace(" ", "%20"))
+                if path.suffix and path.suffix.split(".")[1] in [
+                    "png",
+                    "jpg",
+                    "jpeg",
+                    "gif",
+                    "tif",
+                    "tiff",
+                ]:
+                    body += "!"
+                body += f"[{file_name}](./{path})  "
+            print(f"[{date}] {sender}: {body}", file=mdfile)
+            print(
+                f"<div><span class=date>{date}</span>"
+                f"<span class=sender>{sender}</span>"
+                f"<span class=body>{body}</span></div>",
+                file=htfile,
+            )
+        print("</body></html>", file=htfile)
 
 
 def fetch_data(db_file, key, manual=False):
@@ -146,10 +170,6 @@ def fetch_data(db_file, key, manual=False):
             cursor.execute("PRAGMA kdf_iter = 64000")
             cursor.execute("PRAGMA cipher_hmac_algorithm = HMAC_SHA1")
             cursor.execute("PRAGMA cipher_kdf_algorithm = PBKDF2_HMAC_SHA1")
-
-    # c.execute("PRAGMA table_info(messages);")
-    # for r in c: print(r)
-    # breakpoint()
 
     c.execute("SELECT type, id, e164, name, profileName, members FROM conversations")
     for result in c:

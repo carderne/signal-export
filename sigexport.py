@@ -6,6 +6,7 @@ import os
 import shutil
 from pathlib import Path
 from datetime import datetime
+import re
 
 import click
 from pysqlcipher3 import dbapi2 as sqlcipher
@@ -70,17 +71,6 @@ def make_simple(dest, conversations, contacts):
         name = contacts[key]["name"]
         is_group = contacts[key]["is_group"]
         mdfile = open(dest / name / "index.md", "w")
-        htfile = open(dest / name / "index.html", "w")
-        print(
-            "<!doctype html>"
-            "<html><head>"
-            f"<title>{name}</title>"
-            "<link rel=stylesheet href='../style.css'>"
-            "</head>"
-            "<body>"
-            f"<h1>{name}</h1>",
-            file=htfile,
-        )
 
         for msg in messages:
             try:
@@ -128,13 +118,6 @@ def make_simple(dest, conversations, contacts):
                     body += "!"
                 body += f"[{file_name}](./{path})  "
             print(f"[{date}] {sender}: {body}", file=mdfile)
-            print(
-                f"<div><span class=date>{date}</span>"
-                f"<span class=sender>{sender}</span>"
-                f"<span class=body>{body}</span></div>",
-                file=htfile,
-            )
-        print("</body></html>", file=htfile)
 
 
 def fetch_data(db_file, key, manual=False):
@@ -219,10 +202,93 @@ def fix_names(contacts):
     return contacts
 
 
+def create_html(dest):
+    for sub in dest.iterdir():
+        if sub.is_dir():
+            name = sub.stem
+            print(f"Doing html for {name}")
+            path = sub / "index.md"
+            with path.open() as f:
+                md = f.readlines()
+            md = lines_to_msgs(md)
+            htfile = open(sub / "index.html", "w")
+            print(
+                "<!doctype html>"
+                "<html><head>"
+                f"<title>{name}</title>"
+                "<link rel=stylesheet href='../style.css'>"
+                "</head>"
+                "<body>"
+                f"<h1>{name}</h1>",
+                file=htfile,
+            )
+            for msg in md:
+                date, sender, body = msg
+                print(
+                    f"<div class=msg><span class=date>{date}</span>"
+                    f"<span class=sender>{sender}</span>"
+                    f"<span class=body>{body}</span></div>",
+                    file=htfile,
+                )
+            print("</body></html>", file=htfile)
+
+
+def lines_to_msgs(lines):
+    p = re.compile(r"^(\[\d{4}-\d{2}-\d{2},{0,1} \d{2}:\d{2}\])(.*?:)(.*\n)")
+    msgs = []
+    for li in lines:
+        m = p.match(li)
+        if m:
+            msgs.append(list(m.groups()))
+        else:
+            msgs[-1][-1] += li
+    return msgs
+
+
+def merge_chat(path_new, path_old):
+    with path_old.open() as f:
+        old = f.readlines()
+    with path_new.open() as f:
+        new = f.readlines()
+
+    print(f"Last line old:\n{old[-1][:30]}\nFirst line new:\n{new[0][:30]}")
+    print(f"Len old: {len(old)}  -  Len new: {len(new)}")
+    old = lines_to_msgs(old)
+    new = lines_to_msgs(new)
+    print(f"Should be shorter: Len old: {len(old)}  -  Len new: {len(new)}")
+
+    merged = old + new
+    merged = [m[0] + m[1] + m[2] for m in merged]
+    merged = list(dict.fromkeys(merged))
+
+    with path_new.open("w") as f:
+        f.writelines(merged)
+
+
+def merge_with_old(dest, old):
+    print("Going to merge output with old export at:")
+    print(old)
+    print("No existing files will be deleted or overwritten")
+    for sub in dest.iterdir():
+        if sub.is_dir():
+            name = sub.stem
+            print(f"Merging {name}")
+            path_new = sub / "index.md"
+            path_old = old / name / "index.md"
+            try:
+                merge_chat(path_new, path_old)
+            except FileNotFoundError:
+                print(f"No old for {name}")
+            print()
+
+
 @click.command()
 @click.argument("dest", type=click.Path())
 @click.option(
     "--source", "-s", type=click.Path(), help="Path to Signal source and database"
+)
+@click.option(
+    "--old", "-s", type=click.Path(), help="Path to previous export to merge with"
 )
 @click.option(
     "--overwrite",
@@ -238,7 +304,7 @@ def fix_names(contacts):
     default=False,
     help="Whether to manually decrypt the db",
 )
-def main(dest, source=None, overwrite=False, manual=False):
+def main(dest, old=None, source=None, overwrite=False, manual=False):
     """
     Read the Signal directory and output attachments and chat files to DEST directory.
     Assumes the following default directories, can be overridden wtih --source.
@@ -279,6 +345,9 @@ def main(dest, source=None, overwrite=False, manual=False):
     contacts = fix_names(contacts)
     convos = copy_attachments(src, dest, convos, contacts)
     make_simple(dest, convos, contacts)
+    if old:
+        merge_with_old(dest, Path(old))
+    create_html(dest)
 
     print(f"\nDone! Files exported to {dest}.")
 

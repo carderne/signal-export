@@ -29,6 +29,7 @@ Usage: ./sigexport.py [OPTIONS] [DEST]
 
 Options:
   -s, --source PATH  Path to Signal config and database
+  -o, --old PATH     Path to previous export to merge with
   -o, --overwrite    Flag to overwrite existing output
   -m, --manual       Flag to manually decrypt the database
   --help             Show this message and exit.

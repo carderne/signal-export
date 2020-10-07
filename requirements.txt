@@ -1,2 +1,3 @@
+beautifulsoup4
 Click>=7.0
 pysqlcipher3>=1.0.3

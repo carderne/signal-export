@@ -10,8 +10,8 @@ import re
 
 import click
 from pysqlcipher3 import dbapi2 as sqlcipher
-
-from style import style
+import markdown
+from bs4 import BeautifulSoup
 
 
 def source_location():
@@ -64,9 +64,6 @@ def make_simple(dest, conversations, contacts):
     """Output each conversation into a simple text file."""
 
     dest = Path(dest)
-    with open(dest / "style.css", "w") as stylefile:
-        print(style, file=stylefile)
-
     for key, messages in conversations.items():
         name = contacts[key]["name"]
         is_group = contacts[key]["is_group"]
@@ -203,34 +200,109 @@ def fix_names(contacts):
 
 
 def create_html(dest):
+    root = Path(__file__).resolve().parents[0]
+    shutil.copy2(root / "style.css", dest / "style.css")
+
+    md = markdown.Markdown()
+
     for sub in dest.iterdir():
         if sub.is_dir():
             name = sub.stem
             print(f"Doing html for {name}")
             path = sub / "index.md"
             with path.open() as f:
-                md = f.readlines()
-            md = lines_to_msgs(md)
+                lines = f.readlines()
+            lines = lines_to_msgs(lines)
             htfile = open(sub / "index.html", "w")
             print(
                 "<!doctype html>"
-                "<html><head>"
+                "<html lang='en'><head>"
+                "<meta charset='utf-8'>"
                 f"<title>{name}</title>"
-                "<link rel=stylesheet href='../style.css'>"
+                "<link rel=stylesheet href='../../style.css'>"
                 "</head>"
                 "<body>"
                 f"<h1>{name}</h1>",
                 file=htfile,
             )
-            for msg in md:
+            for msg in lines:
                 date, sender, body = msg
+                body = md.convert(body)
+
+                # links
+                p = r"(https{0,1}://\S*)"
+                template = r"<a href='\1' target='_blank'>\1</a> "
+                body = re.sub(p, template, body)
+
+                # images
+                soup = BeautifulSoup(body, "html.parser")
+                imgs = soup.find_all("img")
+                for im in imgs:
+                    alt = im["alt"]
+                    src = im["src"]
+                    temp = BeautifulSoup(figure_template, "html.parser")
+                    temp.figure.label["for"] = alt
+                    temp.figure.label.img["src"] = src
+                    temp.figure.label.img["alt"] = alt
+                    temp.figure.input["id"] = alt
+                    temp.figure.div.label["for"] = alt
+                    temp.figure.div.label.div.img["src"] = src
+                    temp.figure.div.label.div.img["alt"] = alt
+                    im.replace_with(temp)
+
+                # voice notes
+                voices = soup.select(r"a[href*=Message\.m4a]")
+                for v in voices:
+                    href = v["href"]
+                    temp = BeautifulSoup(audio_template, "html.parser")
+                    temp.audio.source["src"] = href
+                    v.insert_after(temp)
+
+                # videos
+                videos = soup.select(r"a[href*=\.mp4]")
+                for v in videos:
+                    href = v["href"]
+                    temp = BeautifulSoup(video_template, "html.parser")
+                    temp.video.source["src"] = href
+                    v.insert_after(temp)
+
                 print(
                     f"<div class=msg><span class=date>{date}</span>"
                     f"<span class=sender>{sender}</span>"
-                    f"<span class=body>{body}</span></div>",
+                    f"<span class=body>{soup.prettify()}</span></div>",
                     file=htfile,
                 )
             print("</body></html>", file=htfile)
+
+
+video_template = """
+<video controls>
+    <source src="src" type="video/mp4">
+    </source>
+</video>
+"""
+
+audio_template = """
+<audio controls>
+<source src="src" type="audio/mp4">
+</audio>
+"""
+
+figure_template = """
+<figure>
+    <label for="src">
+        <img load="lazy" src="src" alt="img">
+    </label>
+    <input class="modal-state" id="src" type="checkbox">
+    <div class="modal">
+        <label for="src">
+            <div class="modal-content">
+                <img class="modal-photo" loading="lazy" src="src" alt="img">
+            </div>
+        </label>
+    </div>
+</figure>
+"""
 
 
 def lines_to_msgs(lines):
@@ -243,6 +315,12 @@ def lines_to_msgs(lines):
         else:
             msgs[-1][-1] += li
     return msgs
+
+
+def merge_attachments(media_new, media_old):
+    for f in media_old.iterdir():
+        if f.is_file():
+            shutil.copy2(f, media_new)
 
 
 def merge_chat(path_new, path_old):
@@ -273,6 +351,8 @@ def merge_with_old(dest, old):
         if sub.is_dir():
             name = sub.stem
             print(f"Merging {name}")
+            print("Copying files")
+            merge_attachments(sub / "media", old / name / "media")
             path_new = sub / "index.md"
             path_old = old / name / "index.md"
             try:
@@ -287,9 +367,7 @@ def merge_with_old(dest, old):
 @click.option(
     "--source", "-s", type=click.Path(), help="Path to Signal source and database"
 )
-@click.option(
-    "--old", "-s", type=click.Path(), help="Path to previous export to merge with"
-)
+@click.option("--old", type=click.Path(), help="Path to previous export to merge with")
 @click.option(
     "--overwrite",
     "-o",
@@ -304,7 +382,17 @@ def merge_with_old(dest, old):
     default=False,
     help="Whether to manually decrypt the db",
 )
-def main(dest, old=None, source=None, overwrite=False, manual=False):
+@click.option("--only-merge", is_flag=True, default=False)
+@click.option("--only-html", is_flag=True, default=False)
+def main(
+    dest,
+    old=None,
+    source=None,
+    overwrite=False,
+    manual=False,
+    only_merge=False,
+    only_html=False,
+):
     """
     Read the Signal directory and output attachments and chat files to DEST directory.
     Assumes the following default directories, can be overridden wtih --source.
@@ -317,6 +405,13 @@ def main(dest, old=None, source=None, overwrite=False, manual=False):
      - macOS: ~/Library/Application Support/Signal
      - Windows: ~/AppData/Roaming/Signal
     """
+
+    if only_merge:
+        merge_with_old(Path(dest), Path(old))
+        sys.exit()
+    if only_html:
+        create_html(Path(dest))
+        sys.exit()
 
     if source:
         src = Path(source)

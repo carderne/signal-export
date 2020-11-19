@@ -75,12 +75,17 @@ def make_simple(dest, conversations, contacts):
             except KeyError:
                 timestamp = msg["sent_at"]
                 print("No timestamp; use sent_at")
-            date = datetime.fromtimestamp(timestamp / 1000.0).strftime("%Y-%m-%d %H:%M")
+            if timestamp is None:
+                date = "1970-01-01 00:00"
+            else:
+                date = datetime.fromtimestamp(timestamp / 1000.0).strftime("%Y-%m-%d %H:%M")
             try:
                 body = msg["body"]
             except KeyError:
                 print(f"No body:\t\t{date}")
-            body = body if body else ""
+                body = ""
+            if body is None:
+                body = ""
             body = body.replace("`", "")  # stop md code sections forming
             body += "  "  # so that markdown newlines
             attachments = msg["attachments"]

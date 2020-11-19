@@ -207,7 +207,12 @@ def fix_names(contacts):
 
 def create_html(dest):
     root = Path(__file__).resolve().parents[0]
-    shutil.copy2(root / "style.css", dest / "style.css")
+    css_source = root / "style.css"
+    css_dest = dest / "style.css"
+    if os.path.isfile(css_source):
+        shutil.copy2(css_source, css_dest)
+    else:
+        print(f"Stylesheet ({css_source}) not found. You might want to install one manually at {css_dest}.")
 
     md = markdown.Markdown()
 

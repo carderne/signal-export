@@ -194,7 +194,8 @@ def fix_names(contacts):
     """Remove non-filesystem-friendly characters from names."""
 
     for key, item in contacts.items():
-        contacts[key]["name"] = "".join(x for x in item["name"] if x.isalnum())
+        contact_name = item["number"] if item["name"] is None else item["name"]
+        contacts[key]["name"] = "".join(x for x in contact_name if x.isalnum())
 
     return contacts
 

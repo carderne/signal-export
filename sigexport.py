@@ -39,6 +39,9 @@ def copy_attachments(src, dest, conversations, contacts):
 
     for key, messages in conversations.items():
         name = contacts[key]["name"]
+        #some contact names are None
+        if name is None:
+            name = "None"
         contact_path = dest / name / "media"
         contact_path.mkdir(exist_ok=True, parents=True)
         for msg in messages:
@@ -51,7 +54,9 @@ def copy_attachments(src, dest, conversations, contacts):
                     try:
                         file_name = f"{date}_{att['fileName']}"
                         att["fileName"] = file_name
-                        shutil.copy2(src_att / att["path"], contact_path / file_name)
+                        #account for erroneous backslash in path
+                        att_path=str(att["path"]).replace("\\","/")
+                        shutil.copy2(src_att / att_path, contact_path / file_name)
                     except KeyError:
                         print(f"Broken attachment:\t{name}\t{att['fileName']}")
                     except FileNotFoundError:
@@ -67,7 +72,10 @@ def make_simple(dest, conversations, contacts):
     for key, messages in conversations.items():
         name = contacts[key]["name"]
         is_group = contacts[key]["is_group"]
-        mdfile = open(dest / name / "index.md", "w")
+        #some contact names are None
+        if name is None:
+            name = "None"
+        mdfile = open(dest / name / "index.md", 'a')
 
         for msg in messages:
             try:
@@ -92,7 +100,7 @@ def make_simple(dest, conversations, contacts):
             body += "  "  # so that markdown newlines
             attachments = msg["attachments"]
 
-            if msg["type"] == "outgoing":
+            if "type" in msg.keys() and msg["type"] == "outgoing":
                 sender = "Me"
             else:
                 try:
@@ -109,6 +117,9 @@ def make_simple(dest, conversations, contacts):
 
             for att in attachments:
                 file_name = att["fileName"]
+                #some file names are None
+                if file_name is None:
+                    file_name = "None"
                 path = Path("media") / file_name
                 path = Path(str(path).replace(" ", "%20"))
                 if path.suffix and path.suffix.split(".")[1] in [
@@ -202,7 +213,8 @@ def fix_names(contacts):
 
     for key, item in contacts.items():
         contact_name = item["number"] if item["name"] is None else item["name"]
-        contacts[key]["name"] = "".join(x for x in contact_name if x.isalnum())
+        if contacts[key]["name"] is not None:
+            contacts[key]["name"] = "".join(x for x in contact_name if x.isalnum())
 
     return contacts
 
@@ -226,6 +238,8 @@ def create_html(dest):
             name = sub.stem
             print(f"Doing html for {name}")
             path = sub / "index.md"
+            #touch first
+            open(path, 'a')
             with path.open() as f:
                 lines = f.readlines()
             lines = lines_to_msgs(lines)

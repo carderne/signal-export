@@ -56,7 +56,7 @@ Usage: ./sigexport.py [OPTIONS] [DEST]
 Options:
   -s, --source PATH  Path to Signal config and database
       --old PATH     Path to previous export to merge with
-  -c, --chat NAME    Display name of a specific chat (surround name with quotes if it contains spaces)
+  -c, --chat "NAME"  Names of specific chats (separate multiple chats by a comma)
   -o, --overwrite    Flag to overwrite existing output
   -m, --manual       Flag to manually decrypt the database
   --help             Show this message and exit.

@@ -177,7 +177,8 @@ def fetch_data(db_file, key, manual=False, chat=None):
 
     query = "SELECT type, id, e164, name, profileName, members FROM conversations"
     if (chat is not None):
-        query = query + f' WHERE name = "{chat}" OR profileName = "{chat}"'
+        chat = '","'.join(chat)
+        query = query + f' WHERE name IN ("{chat}") OR profileName IN ("{chat}")'
     c.execute(query)
     for result in c:
         is_group = result[0] == "group"
@@ -414,7 +415,7 @@ def merge_with_old(dest, old):
     "--source", "-s", type=click.Path(), help="Path to Signal source and database"
 )
 @click.option(
-    "--chat", "-c", type=click.Path(), help="Particular chat name to be exported"
+    "--chat", "-c", type=click.Path(), help="Set of chat names to be exported"
 )
 @click.option("--old", type=click.Path(), help="Path to previous export to merge with")
 @click.option(
@@ -453,6 +454,9 @@ def main(
         src = source_location()
     source = src / "config.json"
     db_file = src / "sql" / "db.sqlite"
+
+    if chat:
+        chat = chat.split(',')
 
     dest = Path(dest).expanduser()
     if not dest.is_dir():

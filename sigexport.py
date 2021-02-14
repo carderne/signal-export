@@ -415,7 +415,7 @@ def merge_with_old(dest, old):
     "--source", "-s", type=click.Path(), help="Path to Signal source and database"
 )
 @click.option(
-    "--chat", "-c", type=click.Path(), help="Set of chat names to be exported"
+    "--chat", "-c", help="Comma-separated chat names to include. These are contact names or group names"
 )
 @click.option("--old", type=click.Path(), help="Path to previous export to merge with")
 @click.option(

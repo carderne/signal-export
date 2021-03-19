@@ -18,8 +18,6 @@ Images are attached inline with `![name](path)` while other attachments (voice n
 This is converted to HTML at the end so it can be opened with any web browser. The stylesheet `.css` is still very basic but I'll get to it sooner or later.
 
 ## Installation
-There are issues with `sqlcipher`, and I haven't yet heard of anyone successfully using the original method (pipe up if you have!) so I'm going straight to the "advanced" method, which is more likely to work. Note that this will manually decrypt the database to a `db-decrypted.sqlite` file and use that to create the export (the decrypted database is deleted afterwards).
-
 First clone and install requirements (preferably into a virtualenv):
 ```
 git clone https://github.com/carderne/signal-export.git
@@ -47,12 +45,16 @@ sudo make install
 - Run `brew install openssl sqlcipher`
 
 ## Usage
-Assuming you followed the instructions above, you need to use the `--manual` flag in the tool.
-
 The following should work:
 ```
-./sigexport.py --manual outputdir
+./sigexport.py outputdir
 ```
+
+If you get an error:
+
+    pysqlcipher3.dbapi2.DatabaseError: file is not a database
+
+try adding the `--manual` option.
 
 The full options are below:
 ```

@@ -170,10 +170,10 @@ def fetch_data(db_file, key, manual=False, chat=None):
         # param binding doesn't work for pragmas, so use a direct string concat
         for cursor in [c, c2]:
             cursor.execute(f"PRAGMA KEY = \"x'{key}'\"")
-            cursor.execute("PRAGMA cipher_page_size = 1024")
+            cursor.execute("PRAGMA cipher_page_size = 4096")
             cursor.execute("PRAGMA kdf_iter = 64000")
-            cursor.execute("PRAGMA cipher_hmac_algorithm = HMAC_SHA1")
-            cursor.execute("PRAGMA cipher_kdf_algorithm = PBKDF2_HMAC_SHA1")
+            cursor.execute("PRAGMA cipher_hmac_algorithm = HMAC_SHA512")
+            cursor.execute("PRAGMA cipher_kdf_algorithm = PBKDF2_HMAC_SHA512")
 
     query = "SELECT type, id, e164, name, profileName, members FROM conversations"
     if (chat is not None):

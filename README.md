@@ -26,17 +26,18 @@ pip install -r requirements.txt
 ```
 
 ### For Linux
-Then to get sqlcipher working:
+
+Before you can install the pip requirements, you need to get sqlcipher working. For that you need to compile it from source on Debian based distributions to get a recent version:
 ```
-sudo apt install libsqlcipher-dev libssl-dev
+sudo apt install libsqlite3-dev libsqlite3-dev tclsh libssl-dev
 ```
 
 Then clone [sqlcipher](https://github.com/sqlcipher/sqlcipher) and install it:
 ```
 git clone https://github.com/sqlcipher/sqlcipher.git
 cd sqlcipher
-mkdir build && cd build
-../configure --enable-tempstore=yes CFLAGS="-DSQLITE_HAS_CODEC" LDFLAGS="-lcrypto"
+./configure --enable-tempstore=yes CFLAGS="-DSQLITE_HAS_CODEC" LDFLAGS="-lcrypto -lsqlite3"
+make
 sudo make install
 ```
 

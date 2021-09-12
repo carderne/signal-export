@@ -1,4 +1,5 @@
 beautifulsoup4
 Click>=7.0
+emoji>=1.4.2
 Markdown>=3.0
 pysqlcipher3>=1.0.3

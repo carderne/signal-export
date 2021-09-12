@@ -1,3 +1,6 @@
+# OS generated files
+.DS_Store
+
 output/
 
 # Byte-compiled / optimized / DLL files

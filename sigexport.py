@@ -217,7 +217,7 @@ def fetch_data(db_file, key, manual=False, chats=None):
     c.execute(query)
     for result in c:
         if log:
-            print(f"\tLoading SQL results for: {result[3]}")
+            print(f"\tLoading SQL results for: {result[3]}, aka {result[4]}")
         is_group = result[0] == "group"
         cid = result[1]
         contacts[cid] = {

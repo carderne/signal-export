@@ -1,6 +1,10 @@
 # OS generated files
 .DS_Store
 
+# IDE generated files
+.vscode
+
+# Output
 output/
 
 # Byte-compiled / optimized / DLL files

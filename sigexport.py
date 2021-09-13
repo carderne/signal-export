@@ -267,13 +267,17 @@ def fix_names(contacts):
     for key, item in contacts.items():
         contact_name = item["number"] if item["name"] is None else item["name"]
         if contacts[key]["name"] is not None:
-            contacts[key]["name"] = "".join(x for x in emoji.demojize(contact_name) if x.isalnum())
+            contacts[key]["name"] = "".join(
+                x for x in emoji.demojize(contact_name) if x.isalnum()
+            )
             if contacts[key]["name"] == "":
-                contacts[key]["name"] = 'unnamed'
+                contacts[key]["name"] = "unnamed"
             fixed_contact_name = contacts[key]["name"]
             if fixed_contact_name in fixed_contact_names:
                 name_differentiating_number = 2
-                while (fixed_contact_name + str(name_differentiating_number)) in fixed_contact_names:
+                while (
+                    fixed_contact_name + str(name_differentiating_number)
+                ) in fixed_contact_names:
                     name_differentiating_number += 1
                 fixed_contact_name += str(name_differentiating_number)
                 contacts[key]["name"] = fixed_contact_name

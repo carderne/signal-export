@@ -273,7 +273,7 @@ def fix_names(contacts):
             fixed_contact_name = contacts[key]["name"]
             if fixed_contact_name in fixed_contact_names:
                 name_differentiating_number = 2
-                while (fixed_contact_name+str(name_differentiating_number)) in fixed_contact_names:
+                while (fixed_contact_name + str(name_differentiating_number)) in fixed_contact_names:
                     name_differentiating_number += 1
                 fixed_contact_name += str(name_differentiating_number)
                 contacts[key]["name"] = fixed_contact_name

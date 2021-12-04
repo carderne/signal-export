@@ -106,3 +106,20 @@ Run tests with:
 ```
 tox
 ```
+
+## Docker image
+```
+docker build --rm -t signal-export:latest .
+```
+The docker image can be used with any command line arguments to signal-export as an alternative to installing sqlcipher and other dependencies directly, and should work on at least any x64 system.
+```
+SIGNAL_DATA_PATH=/path/to/Signal  # where your Signal data directory is located
+OUTPUT_DIR=/path/to/output        # a directory where you want the data to be exported to
+OUTPUT_NAME=`date +%Y%m%d-%H%M`   # name of the directory for the export
+
+docker run --rm --name signal-export -v ${SIGNAL_DATA_PATH}/:/tmp/Signal/ -v ${OUTPUT_DIR}/:/tmp/output/ -it signal-export:latest /tmp/output/${OUTPUT_NAME} --source /tmp/Signal
+```
+Command line arguments can also be passed to the container as normal
+```
+ocker run --rm --name signal-export -v ${SIGNAL_DATA_PATH}/:/tmp/Signal/ -v ${OUTPUT_DIR}/:/tmp/output/ -it signal-export:latest /tmp/output/${OUTPUT_NAME} --source /tmp/Signal -v -p 0 --overwrite
+```

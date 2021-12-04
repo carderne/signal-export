@@ -121,5 +121,5 @@ docker run --rm --name signal-export -v ${SIGNAL_DATA_PATH}/:/tmp/Signal/ -v ${O
 ```
 Command line arguments can also be passed to the container as normal
 ```
-ocker run --rm --name signal-export -v ${SIGNAL_DATA_PATH}/:/tmp/Signal/ -v ${OUTPUT_DIR}/:/tmp/output/ -it signal-export:latest /tmp/output/${OUTPUT_NAME} --source /tmp/Signal -v -p 0 --overwrite
+docker run --rm --name signal-export -v ${SIGNAL_DATA_PATH}/:/tmp/Signal/ -v ${OUTPUT_DIR}/:/tmp/output/ -it signal-export:latest /tmp/output/${OUTPUT_NAME} --source /tmp/Signal -v -p 0 --overwrite
 ```

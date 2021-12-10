@@ -588,7 +588,7 @@ def main(
         dest.mkdir(parents=True, exist_ok=True)
     else:
         echo(f"Output folder '{dest}' already exists, didn't do anything!")
-        echo("Use --overwrite to ignore existing directory.")
+        echo("Use --overwrite (or -o) to ignore existing directory.")
         sys.exit(1)
 
     contacts = fix_names(contacts)

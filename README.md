@@ -18,11 +18,91 @@ Images are attached inline with `![name](path)` while other attachments (voice n
 This is converted to HTML at the end so it can be opened with any web browser. The stylesheet `.css` is still very basic but I'll get to it sooner or later.
 
 ## Installation
-Before you can install `signal-export`, you need to get `sqlcipher` working. Follow the instructions for your OS:
+### 🚀 Easy mode (maybe?): Docker
+This tool has some pretty difficult dependencies, and so a generous contributor added a Dockerfile! For most people this will probably be the easiest way. It requires installing Docker and then pulling a large image, so avoid this if data use is a concern.
 
-### For Linux
+First off, [install Docker](https://docs.docker.com/get-docker/).
 
-Before you can install the pip requirements, you need to get sqlcipher working. For that you need to compile it from source on Debian based distributions to get a recent version:
+Then set your input location depending on your OS.
+It could even be something different from the below, so figure it out!
+```bash
+SIGNAL_INPUT=~/.config/Signal                         # Linux
+SIGNAL_INPUT="~/Library/Application Support/Signal"   # macOS
+SIGNAL_INPUT="~/AppData/Roaming/Signal"               # Windows
+```
+
+And your output location (again, just use one of these!).
+You can't just specify a subdirectory or Docker will complain!
+```bash
+SIGNAL_OUTPUT=~/Documents/output     # specify relative to home dir
+SIGNAL_OUTPUT=/path/to/output        # or specify the full path
+```
+
+Then run the following command:
+```bash
+docker run --rm -it --name signal-export \
+  -v ${SIGNAL_INPUT}:/Signal \
+  -v ${SIGNAL_OUTPUT}:/output \
+  carderne/signal-export:latest
+```
+
+You can also pass command line arguments to the script as normal, e.g.:
+```bash
+docker run --rm -it --name signal-export \
+  -v ${SIGNAL_INPUT}:/Signal \
+  -v ${SIGNAL_OUTPUT}:/output \
+  carderne/signal-export:latest --overwrite --chats=Jim
+```
+
+#### A helpful shortcut
+If you want to make your life even easier, then add the following snippet to your `.bashrc` (or equivalent):
+```bash
+signalexport () {
+    if [[ -z "$1" || -z "$2" ]]; then
+        echo 'Must provide input path and input path as first two parameters'
+        echo 'e.g. signalexport ~/.config/Signal output/'
+    else
+        input=$(readlink -f $1)
+        output=$(readlink -f $2)
+        shift 2
+        docker run --rm -it --name signal-export \
+          -v $input:/Signal \
+          -v $output:/output \
+          carderne/signal-export:latest $@
+    fi
+}
+```
+
+Then resource your `.bashrc` as follows:
+```bash
+source ~/.bashrc
+```
+
+And then you can simply run the following.
+(And have some Docker annoyances ironed out).
+```bash
+signalexport ~/.config/Signal output --overwrite --chats=Jim
+```
+
+### 🦆 Slightly harder: build your own Docker image
+You can always build your own Docker image if you prefer that.
+Just clone this repository and build it.
+```bash
+git clone https://github.com/carderne/signal-export.git
+cd signal-export
+docker build -t carderne/signal-export:latest .
+```
+
+(You can obviously give it a different name and drop the `carderne` bit!)
+
+### 🌋 Hard mode: install stuff
+This involves actually installing the stuff into your system, but has proven hard to get work for many, especially on Windows.
+
+Before you can install `signal-export`, you need to get `sqlcipher` working.
+Follow the instructions for your OS:
+
+#### For Ubuntu (other distros can adapt to their package manager)
+Install the required libraries.
 ```
 sudo apt install libsqlite3-dev libsqlite3-dev tclsh libssl-dev
 ```
@@ -32,24 +112,29 @@ Then clone [sqlcipher](https://github.com/sqlcipher/sqlcipher) and install it:
 git clone https://github.com/sqlcipher/sqlcipher.git
 cd sqlcipher
 ./configure --enable-tempstore=yes CFLAGS="-DSQLITE_HAS_CODEC" LDFLAGS="-lcrypto -lsqlite3"
-make
-sudo make install
+make && sudo make install
 ```
 
-### For MacOS
+#### For MacOS
 - Install [Homebrew](https://brew.sh).
 - Run `brew install openssl sqlcipher`
 
-### For Windows
-YMMV, but apparently Ubuntu 20.04 on WSL2 should work! That is, install WSL2 and Ubuntu 20.04 on Windows, and then follow the **For Linux** instructions and feel your way forward.
+#### For Windows
+YMMV, but apparently Ubuntu 20.04 on WSL2 should work!
+That is, install WSL2 and Ubuntu 20.04 on Windows, and then follow the **For Linux** instructions and feel your way forward.
+But probably just give up here and use the Docker method instead.
 
 ### Install signal-export
-Install signal-export from GitHub:
+Then you're ready to install signal-export:
 ```
 pip install git+https://github.com/carderne/signal-export.git
 ```
 
 ## Usage
+The below refer to running the script normally.
+If you installed using Docker, then this will give you an overview of the command-line options you can use.
+Just note that with the Docker method, you can't specify the `output` and `--source` directories as command-line options, as they are handled by the `docker_entry.sh` script.
+
 The following should work:
 ```
 sigexport outputdir
@@ -107,19 +192,3 @@ Run tests with:
 tox
 ```
 
-## Docker image
-```
-docker build --rm -t signal-export:latest .
-```
-The docker image can be used with any command line arguments to signal-export as an alternative to installing sqlcipher and other dependencies directly, and should work on at least any x64 system.
-```
-SIGNAL_DATA_PATH=/path/to/Signal  # where your Signal data directory is located
-OUTPUT_DIR=/path/to/output        # a directory where you want the data to be exported to
-OUTPUT_NAME=`date +%Y%m%d-%H%M`   # name of the directory for the export
-
-docker run --rm --name signal-export -v ${SIGNAL_DATA_PATH}/:/tmp/Signal/ -v ${OUTPUT_DIR}/:/tmp/output/ -it signal-export:latest /tmp/output/${OUTPUT_NAME} --source /tmp/Signal
-```
-Command line arguments can also be passed to the container as normal
-```
-docker run --rm --name signal-export -v ${SIGNAL_DATA_PATH}/:/tmp/Signal/ -v ${OUTPUT_DIR}/:/tmp/output/ -it signal-export:latest /tmp/output/${OUTPUT_NAME} --source /tmp/Signal -v -p 0 --overwrite
-```

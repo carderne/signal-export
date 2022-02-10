@@ -98,6 +98,8 @@ cd sqlcipher
 make && sudo make install
 ```
 
+NOTE: If you instead install sqlcipher via your distro's package manager, make sure the version is sufficient. 4.0.1 is known to be too old, 4.5.0 is known to work. Old versions will spit out errors such as "malformed database schema (messages) - near "AS": syntax error". See [issue 26](https://github.com/carderne/signal-export/issues/26).
+
 #### For MacOS
 - Install [Homebrew](https://brew.sh).
 - Run `brew install openssl sqlcipher`

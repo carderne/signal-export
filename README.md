@@ -38,16 +38,16 @@ SIGNAL_OUTPUT="$HOME/Downloads/signal-output"
 Then run the following command, which pulls in the environment variables you set above.
 ```bash
 docker run --rm -it --name signal-export \
-  -v $SIGNAL_INPUT:/Signal \
-  -v $SIGNAL_OUTPUT:/output \
+  -v "$SIGNAL_INPUT:/Signal" \
+  -v "$SIGNAL_OUTPUT:/output" \
   carderne/signal-export:latest
 ```
 
 You can also pass command line arguments to the script as normal, e.g.:
 ```bash
 docker run --rm -it --name signal-export \
-  -v $SIGNAL_INPUT:/Signal \
-  -v $SIGNAL_OUTPUT:/output \
+  -v "$SIGNAL_INPUT:/Signal" \
+  -v "$SIGNAL_OUTPUT:/output" \
   carderne/signal-export:latest --overwrite --chats=Jim
 ```
 

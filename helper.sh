@@ -12,11 +12,11 @@ signalexport () {
             input="$HOME/AppData/Roaming/Signal/"
         fi
 
-        output=$(readlink -f $1)
+        output=$(realpath $1)
         shift 1
         docker run --rm -it --name signal-export \
-          -v $input:/Signal \
-          -v $output:/output \
+          -v "$input:/Signal" \
+          -v "$output:/output" \
           carderne/signal-export:latest $@
     fi
 }

@@ -116,6 +116,8 @@ pip install git+https://github.com/carderne/signal-export.git
 ```
 
 ## Usage
+Please fully exit your Signal app before proceeding, otherwise you will likely encounter an `I/O disk` error, due to the message database being made read-only, as it was being accessed by the app. 
+
 The below refer to running the script normally.
 If you installed using Docker, then this will give you an overview of the command-line options you can use.
 Just note that with the Docker method, you can't specify the `output` and `--source` directories as command-line options, as they are handled by the `docker_entry.sh` script.

@@ -516,20 +516,20 @@ def main(
             secho("Try running this from the command line:\ndocker run hello-world")
             raise Exit(1)
         except subprocess.CalledProcessError as e:
-            secho(f"Docker process failed, see logs below:\n{e}", gf=colors.RED)
+            secho(f"Docker process failed, see logs below:\n{e}", fg=colors.RED)
             raise Exit(1)
         except subprocess.TimeoutExpired:
             secho("Docker process timed out.")
             raise Exit(1)
         except json.JSONDecodeError:
-            secho("Unable to decode data from Docker, see logs below:", gf=colors.RED)
+            secho("Unable to decode data from Docker, see logs below:", fg=colors.RED)
             secho(p.stdout)
-            secho(p.stderr, gf=colors.RED)
+            secho(p.stderr, fg=colors.RED)
             raise Exit(1)
         except (KeyError, TypeError):
             secho(
                 "Unable to extract convos and contacts from Docker, see data below",
-                gf=colors.RED,
+                fg=colors.RED,
             )
             secho(data)
             raise Exit(1)

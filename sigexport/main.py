@@ -261,8 +261,8 @@ def create_html(dest: Path, msgs_per_page: int = 100) -> Iterable[Tuple[Path, st
                 secho(f"\tDoing html for {name}")
             path = sub / "index.md"
             # touch first
-            open(path, "a")
-            with path.open() as f:
+            open(path, "a", encoding="utf-8")
+            with path.open(encoding="utf-8") as f:
                 lines_raw = f.readlines()
             lines = lines_to_msgs(lines_raw)
             last_page = int(len(lines) / msgs_per_page)
@@ -580,7 +580,7 @@ def main(
 
     secho("Creating markdown files")
     for md_path, md_text in create_markdown(dest, convos, contacts, quote):
-        with md_path.open("a") as md_file:
+        with md_path.open("a", encoding="utf-8") as md_file:
             print(md_text, file=md_file)
     if old:
         secho(f"Merging old at {old} into output directory")
@@ -591,7 +591,7 @@ def main(
         if paginate <= 0:
             paginate = int(1e20)
         for ht_path, ht_text in create_html(dest, msgs_per_page=paginate):
-            with ht_path.open("w") as ht_file:
+            with ht_path.open("w", encoding="utf-8") as ht_file:
                 print(ht_text, file=ht_file)
     secho("Done!", fg=colors.GREEN)
 

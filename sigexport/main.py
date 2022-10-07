@@ -390,9 +390,9 @@ def merge_attachments(media_new: Path, media_old: Path) -> None:
 
 
 def merge_chat(path_new: Path, path_old: Path) -> None:
-    with path_old.open() as f:
+    with path_old.open(encoding="utf-8") as f:
         old_raw = f.readlines()
-    with path_new.open() as f:
+    with path_new.open(encoding="utf-8") as f:
         new_raw = f.readlines()
 
     try:
@@ -415,7 +415,7 @@ def merge_chat(path_new: Path, path_old: Path) -> None:
 
     merged = list(dict.fromkeys([m[0] + m[1] + m[2] for m in old + new]))
 
-    with path_new.open("w") as f:
+    with path_new.open("w", encoding="utf-8") as f:
         f.writelines(merged)
 
 

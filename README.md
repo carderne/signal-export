@@ -119,7 +119,7 @@ Then you should be able to use the [Usage instructions](#usage) as above.
 ```bash
 git clone https://github.com/carderne/signal-export.git
 cd signal-export
-pip install -e .[dev,sqlcipher]
+pip install -e .[dev,sql]
 pre-commit install
 ```
 

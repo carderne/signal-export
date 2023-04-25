@@ -87,9 +87,10 @@ You can also run the Docker image directly, it just requires copy-pasting a much
 First set the appropriate environment variables for your OS:
 ```bash
 # Only enter one of these!
-SIGNAL_INPUT="$HOME/.config/Signal"                     # Linux
-SIGNAL_INPUT="$HOME/Library/Application Support/Signal" # macOS
-SIGNAL_INPUT="$HOME/AppData/Roaming/Signal"             # Powershell
+SIGNAL_INPUT="$HOME/.config/Signal"                             # Linux
+SIGNAL_INPUT="$HOME/snap/signal-desktop/current/.config/Signal" # Snap
+SIGNAL_INPUT="$HOME/Library/Application Support/Signal"         # macOS
+SIGNAL_INPUT="$HOME/AppData/Roaming/Signal"                     # Powershell
 
 # And your output location (must be an absolute path)
 SIGNAL_OUTPUT="$HOME/Downloads/signal-output"

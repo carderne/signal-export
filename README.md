@@ -101,7 +101,8 @@ Then run the below command, which pulls in the environment variables you set abo
 # Note that the --overwrite flag is necessary when running like this
 # careful where you point it!
 docker run --rm \
-  -v "$SIGNAL_INPUT:/Signal" \
+  --net none \
+  -v "$SIGNAL_INPUT:/Signal:ro" \
   -v "$SIGNAL_OUTPUT:/output" \
     carderne/sigexport:latest \
     --overwrite /output \         # this line is obligatory!

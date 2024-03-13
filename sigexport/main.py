@@ -222,8 +222,8 @@ def create_markdown(
             quote = ""
             if add_quote:
                 try:
-                    quote = msg["quote"]["text"]
-                    quote = quote.replace("\n", "\n>")
+                    quote = msg["quote"]["text"].rstrip("\n")
+                    quote = quote.replace("\n", "\n> ")
                     quote = f"\n\n> {quote}\n\n"
                 except (KeyError, TypeError):
                     pass

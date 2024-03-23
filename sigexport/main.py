@@ -34,6 +34,9 @@ def main(
     json_output: bool = Option(
         False, "--json/--no-json", "-j", help="Whether to create JSON output"
     ),
+    html_output: bool = Option(
+        False, "--html/--no-html", "-j", help="Whether to create HTML output"
+    ),
     list_chats: bool = Option(
         False, "--list-chats", "-l", help="List available chats and exit"
     ),
@@ -208,7 +211,8 @@ def main(
     if paginate <= 0:
         paginate = int(1e20)
 
-    html.prep_html(dest)
+    if html_output:
+        html_.prep_html(dest)
     for key, messages in chat_dict.items():
         name = contacts[key].name
         md_path = dest / name / "chat.md"
@@ -217,18 +221,22 @@ def main(
 
         md_f = md_path.open("a", encoding="utf-8")
         js_f = js_path.open("a", encoding="utf-8")
-        ht_f = ht_path.open("w", encoding="utf-8")
+        ht_f = None
+        if html_output:
+            ht_f = ht_path.open("w", encoding="utf-8")
 
         try:
             for msg in messages:
                 print(msg.to_md(), file=md_f)
                 print(msg.dict_str(), file=js_f)
-            ht = html.create_html(name=name, messages=messages, msgs_per_page=paginate)
-            print(ht, file=ht_f)
+            if html_output:
+                ht = html_.create_html(name=name, messages=messages, msgs_per_page=paginate)
+                print(ht, file=ht_f)
         finally:
             md_f.close()
             js_f.close()
-            ht_f.close()
+            if html_output:
+                ht_f.close()
 
     secho("Done!", fg=colors.GREEN)
 

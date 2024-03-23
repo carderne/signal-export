@@ -211,6 +211,9 @@ def main(
     html.prep_html(dest)
     for key, messages in chat_dict.items():
         name = contacts[key].name
+        # some contact names are None
+        if not name:
+            name = "None"
         md_path = dest / name / "chat.md"
         js_path = dest / name / "data.json"
         ht_path = dest / name / "index.html"

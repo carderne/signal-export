@@ -13,11 +13,13 @@ def dt_from_ts(ts: float) -> datetime:
 
 
 def parse_datetime(input_str: str) -> datetime:
-    try:
-        return datetime.strptime(input_str, "%Y-%m-%d %H:%M")
-    except ValueError:
-        return datetime.strptime(input_str, "%Y-%m-%d, %H:%M")
-
+    last_exception = None
+    for format in ["%Y-%m-%d %H:%M", "%Y-%m-%d, %H:%M", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d, %H:%M:%S"]:
+        try:
+            return datetime.strptime(input_str, format)
+        except ValueError as e:
+            last_exception = e
+    raise(last_exception)
 
 def version_callback(value: bool) -> None:
     """Get sigexport version."""

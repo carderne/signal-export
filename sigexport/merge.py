@@ -8,7 +8,7 @@ from sigexport.logging import log
 
 def lines_to_msgs(lines: list[str]) -> list[models.MergeMessage]:
     """Extract messages from lines of Markdown."""
-    p = re.compile(r"^\[(\d{4}-\d{2}-\d{2},{0,1} \d{2}:\d{2})\] (.*?): (.*\n)")
+    p = re.compile(r"^\[(\d{4}-\d{2}-\d{2},? \d{2}:\d{2}(?::\d{2})?)] (.*?): ?(.*\n)")
     msgs: list[models.MergeMessage] = []
     for li in lines:
         m = p.match(li)
@@ -56,6 +56,9 @@ def merge_with_old(
     new_chat_dict: models.Chats = {}
     for key, msgs in chat_dict.items():
         name = contacts[key].name
+        # some contact names are None
+        if not name:
+            name = "None"
         dir_old = old / name
         if dir_old.is_dir():
             log(f"\tMerging {name}")

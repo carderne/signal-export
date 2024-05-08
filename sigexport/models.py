@@ -20,6 +20,7 @@ class RawMessage:
 
     timestamp: int | None
     sent_at: int | None
+    server_timestamp: int | None
 
     has_attachments: bool
     attachments: list[dict[str, str]]
@@ -33,7 +34,9 @@ class RawMessage:
     quote: dict[str, Any] | None
 
     def get_ts(self: RawMessage) -> int:
-        if self.sent_at:
+        if self.sent_at>self.server_timestamp:
+            return self.server_timestamp
+        elif self.sent_at<=self.server_timestamp:
             return self.sent_at
         elif self.timestamp:
             return self.timestamp

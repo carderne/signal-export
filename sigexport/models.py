@@ -34,9 +34,9 @@ class RawMessage:
     quote: dict[str, Any] | None
 
     def get_ts(self: RawMessage) -> int:
-        if self.sent_at>self.server_timestamp:
+        if self.sent_at is not None and self.server_timestamp is not None and self.sent_at>self.server_timestamp:
             return self.server_timestamp
-        elif self.sent_at<=self.server_timestamp:
+        elif self.sent_at is not None and self.server_timestamp is not None and self.sent_at<=self.server_timestamp:
             return self.sent_at
         elif self.timestamp:
             return self.timestamp

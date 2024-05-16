@@ -119,6 +119,7 @@ def main(
             docker_logs_1, data_raw, docker_logs_2 = p.stdout.split(DATA_DELIM)
         except ValueError:
             secho(f"Docker process failed, see logs below:\n{p.stderr}", fg=colors.RED)
+            secho("If the Signal app is still running, exit it and try again.")
             raise Exit(1)
         try:
             data = json.loads(data_raw)

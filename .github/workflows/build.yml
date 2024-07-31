@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: prep
+      - name: build pysqlcipher3
         run: |
           git clone --depth=1 --branch=master https://github.com/rigglemania/pysqlcipher3.git
           cd pysqlcipher3
@@ -29,17 +29,19 @@ jobs:
           python setup.py build_amalgamation
           python setup.py build
           cd ..
+          mkdir src/pysqlcipher3
+          for f in pysqlcipher3/build/lib.*/pysqlcipher3/*.{py,so}; do cp $f src/pysqlcipher3/; done
 
-      - name: "Build wheels"
-        uses: pypa/cibuildwheel@v2.19.2
-        env:
-          CIBW_ARCHS: "native"
-          CIBW_BUILD: "${{ matrix.py }}-*"
-          CIBW_SKIP: "pp*"
-          CIBW_BUILD_FRONTEND: "build"
+      - name: build
+        run: |
+          pip install build
+          python -m build
+          PLATFORM_TAG=$(python -c 'import sysconfig; print(sysconfig.get_platform())')
+          cd dist
+          rename.ul any.whl "${PLATFORM_TAG}.whl" *.whl
+          echo "WHEEL_NAME=$(ls *.whl)" >> $GITHUB_ENV
 
-      - name: "Upload wheel as artifact"
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: artifact-${{ matrix.os }}-${{ matrix.cibw_arch }}-wheel
+          name: ${{ env.WHEEL_NAME }}
           path: "wheelhouse/*.whl"

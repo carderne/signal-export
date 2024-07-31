@@ -58,6 +58,7 @@ jobs:
           NEW_NAME=$(ls *.whl | sed "s/any.whl$/${PLATFORM_TAG}.whl/")
           mv *.whl $NEW_NAME
           echo "WHEEL_NAME=$(ls *.whl)" >> $GITHUB_ENV
+          echo "SDIST_NAME=$(ls *.tar.gz)" >> $GITHUB_ENV
 
       - name: test
         run: |
@@ -69,6 +70,13 @@ jobs:
           name: ${{ env.WHEEL_NAME }}
           path: "dist/*.whl"
 
+      - uses: actions/upload-artifact@v4
+        # only do this once
+        if: matrix.os == 'ubuntu-latest'
+        with:
+          name: ${{ env.SDIST_NAME }}
+          path: "dist/*.tar.gz"
+
   upload:
     needs: [build]
     if: startsWith(github.ref, 'refs/tags/')
@@ -79,7 +87,7 @@ jobs:
     - name: Copy artifacts to dist/ folder
       run: |
         mkdir -p dist/
-        # find . -name '*.tar.gz' -exec mv '{}' dist/ \;
+        find . -name '*.tar.gz' -exec mv '{}' dist/ \;
         find . -name '*.whl' -exec mv '{}' dist/ \;
 
     - name: Upload

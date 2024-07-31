@@ -5,11 +5,12 @@ on:
 
 jobs:
   make-wheels:
-    name: Build wheels ${{ matrix.os }} ${{ matrix.cibw_arch }}
+    name: Build wheels ${{ matrix.os }} ${{ matrix.py }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: ["macos-14", "ubuntu-latest", "windows-latest"]
+        py: ["cp39", "cp310", "cp311", "cp312"]
       fail-fast: true
 
     steps:
@@ -18,10 +19,10 @@ jobs:
       - name: "Build wheels"
         uses: pypa/cibuildwheel@v2.19.2
         env:
-          CIBW_ARCHS: native
-          CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-*"
-          CIBW_SKIP: pp*
-          CIBW_BUILD_FRONTEND: build
+          CIBW_ARCHS: "native"
+          CIBW_BUILD: "${{ matrix.py }}-*"
+          CIBW_SKIP: "pp*"
+          CIBW_BUILD_FRONTEND: "build"
 
       - name: "Upload wheel as artifact"
         uses: actions/upload-artifact@v4

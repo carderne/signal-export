@@ -4,97 +4,78 @@ on:
   push:
     tags:
       - '*'
-    branches: [ main ]
-    paths:
-      - '.github/workflows/cicd.yml'
-      - 'sigexport/**'
-      - '.dockerignore'
-      - 'Dockerfile'
-      - 'pyproject.toml'
-  schedule:
-    - cron: '0 2 2 * *'
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    name: Build wheels ${{ matrix.os }} ${{ matrix.py }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ["ubuntu-latest", "macos-14"]
+      fail-fast: false
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Set tag env var
-        run: echo "TAG=`echo $(git describe --tags --abbrev=0)`" >> $GITHUB_ENV
-
-      - name: Docker Buildx base image
+      - name: prep pysqlcipher3
         run: |
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --output "type=image,push=true" \
-            --tag "carderne/sigexport:$TAG" \
-            --tag "carderne/sigexport:latest" \
-            --cache-from "carderne/sigexport:latest" \
-            --cache-to type=inline \
-            .
-  test:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+          git clone --depth=1 --branch=master https://github.com/rigglemania/pysqlcipher3.git
+          cd pysqlcipher3
+          mkdir amalgamation
+          cp ../sqlcipher/sqlite3.[ch] amalgamation
+          mkdir src/python3/sqlcipher
+          cp ../sqlcipher/sqlite3.[ch] src/python3/sqlcipher
+          pip install setuptools
 
-      - name: Set tag env var
-        run: echo "TAG=`echo $(git describe --tags --abbrev=0)`" >> $GITHUB_ENV
+      - name: build pysqlcipher3 linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cd pysqlcipher3
+          python setup.py build_amalgamation
+          python setup.py build
 
-      - name: test
-        uses: addnab/docker-run-action@v3
-        with:
-          image: "carderne/sigexport:${{ env.TAG }}"
-          options: -v ${{ github.workspace }}:/fresh
-          run: |
-            cd /fresh
-            PDM_BUILD_SCM_VERSION=0.0.1 pip install . pytest
-            pytest
+      - name: Set up Homebrew
+        if: matrix.os == 'macos-14'
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@master
 
-  publish:
-    needs: test
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - name: build pysqlcipher3 macOS
+        if: matrix.os == 'macos-14'
+        run: |
+          brew install openssl
+          export LDFLAGS="-L/opt/homebrew/opt/openssl@3/lib"
+          export CPPFLAGS="-I/opt/homebrew/opt/openssl@3/include"
+          cd pysqlcipher3
+          python setup.py build_amalgamation
+          python setup.py build
 
-      - name: Setup python
-        uses: actions/setup-python@v2
-        with:
-          python-version: "3.10"
+      - name: post-build pysqlcipher3
+        run: |
+          mkdir src/pysqlcipher3
+          for f in pysqlcipher3/build/lib.*/pysqlcipher3/*.{py,so}; do cp $f src/pysqlcipher3/; done
 
-      - name: Release
-        uses: softprops/action-gh-release@v1
-
-      - name: Build
+      - name: build
         run: |
           pip install build
           python -m build
+          PLATFORM_TAG=$(python -c 'import sysconfig; print(sysconfig.get_platform().replace("-", "_")')
+          cd dist
+          NEW_NAME=$(ls *.whl | sed "s/any.whl$/${PLATFORM_TAG}.whl/")
+          mv *.whl $NEW_NAME
+          echo "WHEEL_NAME=$(ls *.whl)" >> $GITHUB_ENV
 
-      - name: Publish
-        # mimics: twine upload dist/* --skip-existing
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: test
+        run: |
+          pip install dist/*.whl pytest
+          pytest
+
+      - uses: actions/upload-artifact@v4
         with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
-          skip_existing: true
+          name: ${{ env.WHEEL_NAME }}
+          path: "dist/*.whl"
+
+      # - name: Publish
+      #   uses: pypa/gh-action-pypi-publish@release/v1
+      #   with:
+      #     password: ${{ secrets.PYPI_API_TOKEN }}
+      #     skip_existing: true

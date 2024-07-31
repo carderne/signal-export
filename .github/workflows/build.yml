@@ -38,7 +38,8 @@ jobs:
           python -m build
           PLATFORM_TAG=$(python -c 'import sysconfig; print(sysconfig.get_platform())')
           cd dist
-          rename.ul any.whl "${PLATFORM_TAG}.whl" *.whl
+          NEW_NAME=$(ls *.whl | sed "s/any.whl$/${PLATFORM_TAG}.whl/")
+          mv *.whl $NEW_NAME
           echo "WHEEL_NAME=$(ls *.whl)" >> $GITHUB_ENV
 
       - uses: actions/upload-artifact@v4

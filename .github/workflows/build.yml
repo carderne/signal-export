@@ -9,13 +9,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: ["ubuntu-latest", "macos-14", "windows-latest"]
+        os: ["ubuntu-latest", "macos-14"]
       fail-fast: false
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: build pysqlcipher3
+      - name: prep pysqlcipher3
         run: |
           git clone --depth=1 --branch=master https://github.com/rigglemania/pysqlcipher3.git
           cd pysqlcipher3
@@ -24,9 +24,29 @@ jobs:
           mkdir src/python3/sqlcipher
           cp ../sqlcipher/sqlite3.[ch] src/python3/sqlcipher
           pip install setuptools
+
+      - name: build pysqlcipher3 linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
           python setup.py build_amalgamation
           python setup.py build
-          cd ..
+
+      - name: Set up Homebrew
+        if: matrix.os == 'macos-14'
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: build pysqlcipher3 macOS
+        if: matrix.os == 'macos-14'
+        run: |
+          brew install openssl
+          export LDFLAGS="-L/opt/homebrew/opt/openssl@3/lib"
+          export CPPFLAGS="-I/opt/homebrew/opt/openssl@3/include"
+          python setup.py build_amalgamation
+          python setup.py build
+
+      - name: post-build pysqlcipher3
+        run: |
           mkdir src/pysqlcipher3
           for f in pysqlcipher3/build/lib.*/pysqlcipher3/*.{py,so}; do cp $f src/pysqlcipher3/; done
 

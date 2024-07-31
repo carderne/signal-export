@@ -58,7 +58,7 @@ jobs:
         run: |
           pip install build
           python -m build
-          PLATFORM_TAG=$(python -c 'import sysconfig; print(sysconfig.get_platform().replace("-", "_")')
+          PLATFORM_TAG=$(python -c 'import sysconfig; print(sysconfig.get_platform().replace("-", "_"))')
           cd dist
           NEW_NAME=$(ls *.whl | sed "s/any.whl$/${PLATFORM_TAG}.whl/")
           mv *.whl $NEW_NAME

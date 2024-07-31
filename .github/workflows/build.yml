@@ -9,8 +9,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: ["ubuntu-latest", "macos-14", "windows-latest"]
-        py: ["cp39", "cp310", "cp311", "cp312"]
+        os: ["ubuntu-latest"]
+        py: ["cp312"]
+        # os: ["ubuntu-latest", "macos-14", "windows-latest"]
+        # py: ["cp39", "cp310", "cp311", "cp312"]
       fail-fast: true
 
     steps:

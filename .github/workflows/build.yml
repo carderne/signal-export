@@ -16,9 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prep
-        run: ./build_sqlcipher.sh
-
+      - run: ./build_sqlcipher.sh
 
       - name: "Build wheels"
         uses: pypa/cibuildwheel@v2.19.2

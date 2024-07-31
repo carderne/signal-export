@@ -28,6 +28,7 @@ jobs:
       - name: build pysqlcipher3 linux
         if: matrix.os == 'ubuntu-latest'
         run: |
+          cd pysqlcipher3
           python setup.py build_amalgamation
           python setup.py build
 
@@ -42,6 +43,7 @@ jobs:
           brew install openssl
           export LDFLAGS="-L/opt/homebrew/opt/openssl@3/lib"
           export CPPFLAGS="-I/opt/homebrew/opt/openssl@3/include"
+          cd pysqlcipher3
           python setup.py build_amalgamation
           python setup.py build
 

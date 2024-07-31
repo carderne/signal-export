@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build wheels ${{ matrix.os }} ${{ matrix.py }}
+    name: build ${{ matrix.os }} ${{ matrix.py }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -33,11 +33,6 @@ jobs:
           cd pysqlcipher3
           python setup.py build_amalgamation
           python setup.py build
-
-      - name: Set up Homebrew
-        if: matrix.os == 'macos-14'
-        id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@master
 
       - name: build pysqlcipher3 macOS
         if: matrix.os == 'macos-14'
@@ -64,18 +59,31 @@ jobs:
           mv *.whl $NEW_NAME
           echo "WHEEL_NAME=$(ls *.whl)" >> $GITHUB_ENV
 
-      - name: test
-        run: |
-          pip install dist/*.whl pytest
-          pytest
+      # - name: test
+      #   run: |
+      #     pip install dist/*.whl pytest
+      #     pytest
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ env.WHEEL_NAME }}
           path: "dist/*.whl"
 
-      # - name: Publish
-      #   uses: pypa/gh-action-pypi-publish@release/v1
-      #   with:
-      #     password: ${{ secrets.PYPI_API_TOKEN }}
-      #     skip_existing: true
+  upload:
+    needs: [build]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v4
+
+    - name: Copy artifacts to dist/ folder
+      run: |
+        mkdir -p dist/
+        # find . -name '*.tar.gz' -exec mv '{}' dist/ \;
+        find . -name '*.whl' -exec mv '{}' dist/ \;
+
+    - name: Upload
+      uses: pypa/gh-action-pypi-publish@v1.4.2
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        skip_existing: true

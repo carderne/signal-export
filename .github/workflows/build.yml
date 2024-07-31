@@ -24,6 +24,7 @@ jobs:
           cp ../sqlcipher/sqlite3.[ch] amalgamation
           mkdir src/python3/sqlcipher
           cp ../sqlcipher/sqlite3.[ch] src/python3/sqlcipher
+          pip install setuptools
           python setup.py build_amalgamation
           python setup.py build
           cd ..

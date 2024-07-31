@@ -62,6 +62,11 @@ jobs:
           mv *.whl $NEW_NAME
           echo "WHEEL_NAME=$(ls *.whl)" >> $GITHUB_ENV
 
+      - name: test
+        run: |
+          pip install dist/*.whl pytest
+          pytest
+
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ env.WHEEL_NAME }}

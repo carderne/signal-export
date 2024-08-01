@@ -28,6 +28,8 @@ jobs:
       - name: build
         run: |
           pip install build
+          export LDFLAGS="-L/opt/homebrew/opt/openssl@3/lib"
+          export CPPFLAGS="-I/opt/homebrew/opt/openssl@3/include"
           python -m build
           echo "WHEEL_NAME=$(ls dist/*.whl)" >> $GITHUB_ENV
           echo "SDIST_NAME=$(ls dist/*.tar.gz)" >> $GITHUB_ENV

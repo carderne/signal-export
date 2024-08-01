@@ -1,4 +1,4 @@
 graft sqlcipher
 graft src
 
-global-exclude *~ *.pyc
+global-exclude *.pyc

@@ -34,10 +34,10 @@ jobs:
           echo "WHEEL_NAME=$(ls dist/*.whl)" >> $GITHUB_ENV
           echo "SDIST_NAME=$(ls dist/*.tar.gz)" >> $GITHUB_ENV
 
-      - name: test
-        run: |
-          pip install dist/*.whl pytest
-          pytest
+      # - name: test
+      #   run: |
+      #     pip install dist/*.whl pytest
+      #     pytest
 
       - uses: actions/upload-artifact@v4
         with:

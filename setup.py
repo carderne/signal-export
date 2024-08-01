@@ -52,15 +52,6 @@ define_macros: Optional[list[tuple[str, Optional[str]]]] = [
 
 class AmalgationLibSQLCipherBuilder(build_ext):
     def build_extension(self, ext):  # noqa  # type: ignore
-        sqlcipher_root = "sqlcipher"
-        sqlcipher_header = os.path.join(sqlcipher_root, "sqlite3.h")
-        sqlcipher_source = os.path.join(sqlcipher_root, "sqlite3.c")
-        if not os.path.exists(sqlcipher_header) or not os.path.exists(sqlcipher_source):
-            raise RuntimeError("SQLCipher amalgamation not found")
-
-        ext.include_dirs.append(sqlcipher_root)
-        ext.sources.append(sqlcipher_source)
-
         # build with fulltext search enabled
         ext.define_macros.append(("SQLITE_ENABLE_FTS3", "1"))
         ext.define_macros.append(("SQLITE_ENABLE_RTREE", "1"))

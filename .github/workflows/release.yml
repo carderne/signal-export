@@ -18,12 +18,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: extra env vars for macOS
-        if: matrix.os == 'macos-latest'
-        run: |
-          brew install openssl
-          export LDFLAGS="-L/opt/homebrew/opt/openssl@3/lib"
-          export CPPFLAGS="-I/opt/homebrew/opt/openssl@3/include"
+      # - name: extra env vars for macOS
+      #   if: matrix.os == 'macos-latest'
+      #   run: |
+      #     brew install openssl
+      #     export LDFLAGS="-L/opt/homebrew/opt/openssl@3/lib"
+      #     export CPPFLAGS="-I/opt/homebrew/opt/openssl@3/include"
 
       - name: build
         run: |

@@ -41,14 +41,10 @@ dependencies = [
 managed = true
 generate-hashes = false
 dev-dependencies = [
-    "build",
     "pyright",
     "pre-commit",
     "pytest",
     "pytest-cov",
-    "ruff ~= 0.2",
-    "setuptools-scm",
-    "twine",
     "types-Markdown",
     "types-emoji",
 ]
@@ -61,14 +57,13 @@ repository = "https://github.com/carderne/signal-export"
 sigexport = "sigexport.main:cli"
 
 [build-system]
-requires = ["pdm-backend"]
-build-backend = "pdm.backend"
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
 
-[tool.pdm.build]
-includes = ["src/"]
+[tool.setuptools]
+package-dir = {"" = "src"}
 
-[tool.pdm.version]
-source = "scm"
+[tool.setuptools_scm]
 
 [tool.ruff]
 target-version = "py39"

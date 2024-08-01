@@ -1,5 +1,7 @@
 # sqlcipher
 
+Source: https://github.com/sqlcipher/sqlcipher
+
 Copyright belongs to [SQLite](https://www.sqlite.org/) and [Zetetic](https://github.com/sqlcipher/sqlcipher?tab=License-1-ov-file).
 
 This is a vendored amalgamation build of SQLCipher, built as follows:

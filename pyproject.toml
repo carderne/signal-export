@@ -47,6 +47,8 @@ dev-dependencies = [
     "pytest-cov",
     "types-Markdown",
     "types-emoji",
+    "setuptools-scm~=8.1.0",
+    "build~=1.2.1",
 ]
 
 [project.urls]

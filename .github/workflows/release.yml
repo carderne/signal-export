@@ -18,49 +18,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: prep pysqlcipher3
-        run: |
-          git clone --depth=1 --branch=master https://github.com/rigglemania/pysqlcipher3.git
-          cd pysqlcipher3
-          mkdir amalgamation
-          cp ../sqlcipher/sqlite3.[ch] amalgamation
-          mkdir src/python3/sqlcipher
-          cp ../sqlcipher/sqlite3.[ch] src/python3/sqlcipher
-          pip install setuptools
-
-      - name: build pysqlcipher3 linux
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          cd pysqlcipher3
-          python setup.py build_amalgamation
-          python setup.py build
-          echo 'PLATFORM_TAG="manylinux2014_x86_64"' >> $GITHUB_ENV
-
-      - name: build pysqlcipher3 macOS
+      - name: extra env vars for macOS
         if: matrix.os == 'macos-latest'
         run: |
           brew install openssl
           export LDFLAGS="-L/opt/homebrew/opt/openssl@3/lib"
           export CPPFLAGS="-I/opt/homebrew/opt/openssl@3/include"
-          cd pysqlcipher3
-          python setup.py build_amalgamation
-          python setup.py build
-          echo 'PLATFORM_TAG="macosx_10_9_universal2"' >> $GITHUB_ENV
-
-      - name: post-build pysqlcipher3
-        run: |
-          mkdir src/pysqlcipher3
-          for f in pysqlcipher3/build/lib.*/pysqlcipher3/*.{py,so}; do cp $f src/pysqlcipher3/; done
 
       - name: build
         run: |
           pip install build
           python -m build
-          cd dist
-          NEW_NAME=$(ls *.whl | sed "s/any.whl$/${{ env.PLATFORM_TAG }}.whl/")
-          mv *.whl $NEW_NAME
-          echo "WHEEL_NAME=$(ls *.whl)" >> $GITHUB_ENV
-          echo "SDIST_NAME=$(ls *.tar.gz)" >> $GITHUB_ENV
+          echo "WHEEL_NAME=$(ls dist/*.whl)" >> $GITHUB_ENV
+          echo "SDIST_NAME=$(ls dist/*.tar.gz)" >> $GITHUB_ENV
 
       - name: test
         run: |

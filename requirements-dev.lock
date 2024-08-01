@@ -12,6 +12,7 @@
 -e file:.
 beautifulsoup4==4.12.3
     # via signal-export
+build==1.2.1
 cfgv==3.4.0
     # via pre-commit
 click==8.1.7
@@ -40,7 +41,9 @@ nodeenv==1.8.0
     # via pre-commit
     # via pyright
 packaging==24.0
+    # via build
     # via pytest
+    # via setuptools-scm
 platformdirs==4.2.0
     # via virtualenv
 pluggy==1.4.0
@@ -50,6 +53,8 @@ pycryptodome==3.20.0
     # via signal-export
 pygments==2.17.2
     # via rich
+pyproject-hooks==1.1.0
+    # via build
 pyright==1.1.354
 pytest==8.1.1
     # via pytest-cov
@@ -60,6 +65,8 @@ rich==13.7.1
     # via typer
 setuptools==69.2.0
     # via nodeenv
+    # via setuptools-scm
+setuptools-scm==8.1.0
 shellingham==1.5.4
     # via typer
 soupsieve==2.5

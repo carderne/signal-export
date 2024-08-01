@@ -1,0 +1,4 @@
+graft sqlcipher
+graft src
+
+global-exclude *~ *.pyc

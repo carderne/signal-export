@@ -51,31 +51,15 @@ define_macros: Optional[list[tuple[str, Optional[str]]]] = [
 
 
 class AmalgationLibSQLCipherBuilder(build_ext):
-    description = "Builds a C extension using a sqlcipher amalgamation"
-
-    amalgamation_root = "sqlcipher"
-    amalgamation_header = os.path.join(amalgamation_root, "sqlite3.h")
-    amalgamation_source = os.path.join(amalgamation_root, "sqlite3.c")
-
-    amalgamation_message = """
-    SQL Cipher amalgamation not found. Please download or build the
-    amalgamation and make sure the following files are present in the
-    amalgamation folder: sqlite3.h, sqlite3.c"""
-
-    def check_amalgamation(self):  # noqa
-        if not os.path.exists(self.amalgamation_root):
-            os.mkdir(self.amalgamation_root)
-
-        header_exists = os.path.exists(self.amalgamation_header)
-        source_exists = os.path.exists(self.amalgamation_source)
-        if not header_exists or not source_exists:
-            raise RuntimeError(self.amalgamation_message)
-
     def build_extension(self, ext):  # noqa  # type: ignore
-        print(self.description)
+        sqlcipher_root = Path("sqlcipher")
+        sqlcipher_header = sqlcipher_root /  "sqlite3.h"
+        sqlcipher_source = sqlcipher_root / "sqlite3.c"
+        if not sqlcipher_header.exists() or not sqlcipher_source.exists():
+            raise RuntimeError("SQLCipher amalgamation not found")
 
-        # it is responsibility of user to provide amalgamation
-        self.check_amalgamation()
+        ext.include_dirs.append(str(sqlcipher_root))
+        ext.sources.append(str(sqlcipher_source))
 
         # build with fulltext search enabled
         ext.define_macros.append(("SQLITE_ENABLE_FTS3", "1"))
@@ -85,9 +69,6 @@ class AmalgationLibSQLCipherBuilder(build_ext):
         ext.define_macros.append(("SQLITE_ENABLE_LOAD_EXTENSION", "1"))
         ext.define_macros.append(("SQLITE_HAS_CODEC", "1"))
         ext.define_macros.append(("SQLITE_TEMP_STORE", "2"))
-
-        ext.include_dirs.append(self.amalgamation_root)
-        ext.sources.append(os.path.join(self.amalgamation_root, "sqlite3.c"))
 
         if sys.platform == "win32":
             # Try to locate openssl
@@ -113,14 +94,12 @@ class AmalgationLibSQLCipherBuilder(build_ext):
 
 
 setuptools.setup(
-    **{
-        "ext_modules": [
-            Extension(
-                name=PACKAGE_NAME + EXTENSION_MODULE_NAME,
-                sources=sources,
-                define_macros=define_macros,
-            )
-        ],
-        "cmdclass": {"build_ext": AmalgationLibSQLCipherBuilder},
-    }
+    ext_modules=[
+        Extension(
+            name=PACKAGE_NAME + EXTENSION_MODULE_NAME,
+            sources=sources,
+            define_macros=define_macros,
+        )
+    ],
+    cmdclass={"build_ext": AmalgationLibSQLCipherBuilder},
 )

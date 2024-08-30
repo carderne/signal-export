@@ -14,8 +14,6 @@ beautifulsoup4==4.12.3
     # via signal-export
 click==8.1.7
     # via typer
-colorama==0.4.6
-    # via typer
 coverage==7.4.4
     # via pytest-cov
 emoji==2.10.1
@@ -52,7 +50,7 @@ soupsieve==2.5
     # via beautifulsoup4
 sqlcipher3-wheels==0.5.2.post1
     # via signal-export
-typer==0.9.0
+typer==0.12.5
     # via signal-export
 types-emoji==2.1.0.3
 types-markdown==3.6.0.20240316

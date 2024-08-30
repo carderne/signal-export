@@ -14,8 +14,6 @@ beautifulsoup4==4.12.3
     # via signal-export
 click==8.1.7
     # via typer
-colorama==0.4.6
-    # via typer
 emoji==2.10.1
     # via signal-export
 markdown==3.6
@@ -36,7 +34,7 @@ soupsieve==2.5
     # via beautifulsoup4
 sqlcipher3-wheels==0.5.2.post1
     # via signal-export
-typer==0.9.0
+typer==0.12.5
     # via signal-export
 typing-extensions==4.10.0
     # via typer

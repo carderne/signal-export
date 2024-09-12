@@ -18,6 +18,7 @@ def main(
     source: OptionalPath = Option(None, help="Path to Signal source directory"),
     old: OptionalPath = Option(None, help="Path to previous export to merge"),
     password: OptionalStr = Option(None, help="Linux-only. Password to decrypt DB key"),
+    key: OptionalStr = Option(None, help="Linux-only. DB key, as found in the old config.json"),
     paginate: int = Option(
         100, "--paginate", "-p", help="Messages per page in HTML; set to 0 for infinite"
     ),
@@ -73,6 +74,7 @@ def main(
     convos, contacts = data.fetch_data(
         source_dir,
         password=password,
+        key=key,
         chats=chats,
         include_empty=include_empty,
     )

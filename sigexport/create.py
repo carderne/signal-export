@@ -35,8 +35,8 @@ def create_message(
         try:
             if is_group:
                 for c in contacts.values():
-                    num = c.number
-                    if num is not None and num == msg.source:
+                    serviceId = c.serviceId
+                    if serviceId is not None and serviceId == msg.source:
                         sender = c.name
             else:
                 sender = contacts[msg.conversation_id].name

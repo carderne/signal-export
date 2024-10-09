@@ -49,6 +49,7 @@ class RawMessage:
 @dataclass
 class Contact:
     id: str
+    serviceId: str
     name: str
     number: str
     profile_name: str

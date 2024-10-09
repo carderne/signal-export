@@ -41,27 +41,28 @@ def fetch_data(
     c.execute("PRAGMA cipher_hmac_algorithm = HMAC_SHA512")
     c.execute("PRAGMA cipher_kdf_algorithm = PBKDF2_HMAC_SHA512")
 
-    query = "SELECT type, id, e164, name, profileName, members FROM conversations"
+    query = "SELECT type, id, serviceId, e164, name, profileName, members FROM conversations"
     c.execute(query)
     for result in c:
-        log(f"\tLoading SQL results for: {result[3]}, aka {result[4]}")
+        log(f"\tLoading SQL results for: {result[4]}, aka {result[5]}")
         members = []
-        if result[5]:
-            members = result[5].split(" ")
+        if result[6]:
+            members = result[6].split(" ")
         is_group = result[0] == "group"
         cid = result[1]
         contacts[cid] = models.Contact(
             id=cid,
-            name=result[3],
-            number=result[2],
-            profile_name=result[4],
+            serviceId=result[2],
+            name=result[4],
+            number=result[3],
+            profile_name=result[5],
             members=members,
             is_group=is_group,
         )
         if contacts[cid].name is None:
             contacts[cid].name = contacts[cid].profile_name
 
-        if not chats or (result[3] in chats_list or result[4] in chats_list):
+        if not chats or (result[4] in chats_list or result[5] in chats_list):
             convos[cid] = []
 
     query = "SELECT json, conversationId FROM messages ORDER BY sent_at"
@@ -78,7 +79,7 @@ def fetch_data(
                 type=res.get("type"),
                 body=res.get("body", ""),
                 contact=res.get("contact"),
-                source=res.get("source"),
+                source=res.get("sourceServiceId"),
                 timestamp=res.get("timestamp"),
                 sent_at=res.get("sent_at"),
                 server_timestamp=res.get("serverTimestamp"),

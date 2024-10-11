@@ -2,7 +2,8 @@ import sys
 from datetime import datetime
 from importlib.metadata import version
 from pathlib import Path
-from typing import cast
+from typing import Any, TypedDict, Union, cast
+from typing_extensions import TypeGuard
 
 import emoji
 from typer import Exit, secho
@@ -12,8 +13,34 @@ from sigexport import models
 VERSION = version("signal-export")
 
 
-def dt_from_ts(ts: float) -> datetime:
-    return datetime.fromtimestamp(ts / 1000.0)
+class Timestamp64(TypedDict):
+    high: int
+    low: int
+
+
+def dt_from_ts(ts: Union[float, dict[str, Any]]) -> datetime:
+    if isinstance(ts, dict) and is_timestamp64(ts):
+        val = _combine_timestamp(ts)
+        return datetime.fromtimestamp(val / 1000.0)
+    elif isinstance(ts, (int, float)):
+        return datetime.fromtimestamp(ts / 1000.0)
+    else:
+        raise ValueError(f"Invalid timestamp: {ts}")
+
+
+def is_timestamp64(ts: dict[str, Any]) -> TypeGuard[Timestamp64]:
+    return (
+        "high" in ts
+        and "low" in ts
+        and isinstance(ts["high"], int)
+        and isinstance(ts["low"], int)
+    )
+
+
+def _combine_timestamp(ts: Timestamp64) -> int:
+    high = ts["high"]
+    low = ts["low"] if ts["low"] >= 0 else (ts["low"] + 2**32)
+    return (high << 32) | low
 
 
 def parse_datetime(input_str: str) -> datetime:

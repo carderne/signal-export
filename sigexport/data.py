@@ -14,6 +14,7 @@ from sigexport.logging import log
 def fetch_data(
     source_dir: Path,
     password: Optional[str],
+    key: Optional[str],
     chats: str,
     include_empty: bool,
 ) -> tuple[models.Convos, models.Contacts]:
@@ -21,11 +22,12 @@ def fetch_data(
     db_file = source_dir / "sql" / "db.sqlite"
     signal_config = source_dir / "config.json"
 
-    try:
-        key = crypto.get_key(signal_config, password)
-    except Exception:
-        secho("Failed to decrypt Signal password", fg=colors.RED)
-        raise Exit(1)
+    if key is None:
+        try:
+            key = crypto.get_key(signal_config, password)
+        except Exception:
+            secho("Failed to decrypt Signal password", fg=colors.RED)
+            raise Exit(1)
 
     log(f"Fetching data from {db_file}\n")
     contacts: models.Contacts = {}

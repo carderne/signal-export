@@ -44,17 +44,23 @@ def get_key(file: Path, password: Optional[str]) -> str:
         if sys.platform == "darwin":
             pw = get_password()
             return decrypt(pw, encrypyed_key, b"v10", 1003)
-        else:
+        else:  # linux
             if password:
                 return decrypt(password, encrypyed_key, b"v11", 1)
             else:
                 secho("Your Signal data key is encrypted, and requires a password.")
-                secho("On Gnome, you can try to get this with this command:")
-                secho("secret-tool lookup application Signal\n", fg=colors.BLUE)
-                secho("On KDE, you can try to get this with this command:")
-                secho("kwallet-query kdewallet -f 'Chromium Keys' -r 'Chromium Safe Storage'\n", fg=colors.BLUE)
-                secho("Then please rerun sigexport as follows:")
-                secho("sigexport --password=PASSWORD_FROM_COMMAND ...", fg=colors.BLUE)
+                if "safeStorageBackend" not in data or data["safeStorageBackend"] == "gnome_libsecret":
+                    secho("On Gnome, you can try to get this with this command:")
+                    secho("secret-tool lookup application Signal\n", fg=colors.BLUE)
+                if "safeStorageBackend" not in data or data["safeStorageBackend"] in [
+                        "kwallet", "kwallet5", "kwallet6"]:
+                    secho("On KDE, you can try to get this with this command:")
+                    secho("kwallet-query kdewallet -f 'Chromium Keys' -r 'Chromium Safe Storage'\n", fg=colors.BLUE)
+                if "safeStorageBackend" in data and data["safeStorageBackend"] not in [
+                        "gnome_libsecret", "kwallet", "kwallet5", "kwallet6"]:
+                    secho(f"The safe storage backend is {data['safeStorageBackend']}")
+                    secho("If you know some Python and know how to retreive passwords "
+                          "from this backend, please contribute a PR!")
     else:
         secho("No Signal decryption key found", fg=colors.RED)
     raise

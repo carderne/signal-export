@@ -37,6 +37,8 @@ def get_key(file: Path, password: Optional[str]) -> str:
                 secho("Your Signal data key is encrypted, and requires a password.")
                 secho("On Gnome, you can try to get this with this command:")
                 secho("secret-tool lookup application Signal\n", fg=colors.BLUE)
+                secho("On KDE, you can try to get this with this command:")
+                secho("kwallet-query kdewallet -f 'Chromium Keys' -r 'Chromium Safe Storage'\n", fg=colors.BLUE)
                 secho("Then please rerun sigexport as follows:")
                 secho("sigexport --password=PASSWORD_FROM_COMMAND ...", fg=colors.BLUE)
     else:

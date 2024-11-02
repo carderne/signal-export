@@ -15,6 +15,20 @@ from typer import colors, secho
 
 
 def get_key(file: Path, password: Optional[str]) -> str:
+    """Get key for decrypting database.
+
+    Retreives key depending on key encryption software.
+
+    If it cannot be decrypted, print an explanation message.
+
+    Args:
+        file: Signal config json file path
+        password: password that user could have supplied to decrypt key
+    Returns:
+        (decrypted) password
+    Raises:
+        non-specified exception if no decrypted password is available.
+    """
     with open(file, encoding="utf-8") as f:
         data = json.loads(f.read())
     if "key" in data:

@@ -1,5 +1,4 @@
 # signal-export
-[![cicd](https://github.com/carderne/signal-export/actions/workflows/cicd.yml/badge.svg)](https://github.com/carderne/signal-export/actions/workflows/cicd.yml)
 [![PyPI version](https://badge.fury.io/py/signal-export.svg)](https://pypi.org/project/signal-export/)
 
 **⚠️ WARNING: Because the latest versions of Signal Desktop protect the database encryption key, this tool currently only works on macOS and Linux.

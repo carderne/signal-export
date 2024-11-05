@@ -39,7 +39,7 @@ def get_key(file: Path, password: Optional[str]) -> str:
     if "key" in data:
         return data["key"]
     elif "encryptedKey" in data:
-        encrypyed_key = data["encryptedKey"]
+        encrypted_key = data["encryptedKey"]
         if sys.platform == "win32":
             secho(
                 "Signal decryption isn't currently supported on Windows"
@@ -48,20 +48,20 @@ def get_key(file: Path, password: Optional[str]) -> str:
             )
         if sys.platform == "darwin":
             if password:
-                return decrypt(password, encrypyed_key, b"v10", 1003)
+                return decrypt(password, encrypted_key, b"v10", 1003)
             pw = get_password(PASSWORD_CMD_DARWIN, "macOS")  # may raise error
-            return decrypt(pw, encrypyed_key, b"v10", 1003)
+            return decrypt(pw, encrypted_key, b"v10", 1003)
         else:  # linux
             if password:
-                return decrypt(password, encrypyed_key, b"v11", 1)
+                return decrypt(password, encrypted_key, b"v11", 1)
             elif "safeStorageBackend" in data:
                 if data["safeStorageBackend"] == "gnome_libsecret":
                     pw = get_password(PASSWORD_CMD_GNOME, "gnome")  # may raise error
-                    return decrypt(pw, encryted_key, b"v11", 1)
+                    return decrypt(pw, encrypted_key, b"v11", 1)
                 elif data["safeStorageBackend"] in [
                         "gnome_libsecret", "kwallet", "kwallet5", "kwallet6"]:
                     pw = get_password(PASSWORD_CMD_KDE, "KDE")  # may raise error
-                    return decrypt(pw, encryted_key, b"v11", 1)
+                    return decrypt(pw, encrypted_key, b"v11", 1)
                 else:
                     secho("Your Signal data key is encrypted, and requires a password.")
                     secho(f"The safe storage backend is {data['safeStorageBackend']}")

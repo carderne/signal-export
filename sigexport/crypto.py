@@ -57,12 +57,11 @@ def get_key(file: Path, password: Optional[str]) -> str:
             elif "safeStorageBackend" in data:
                 if data["safeStorageBackend"] == "gnome_libsecret":
                     pw = get_password(PASSWORD_CMD_GNOME, "gnome")  # may raise error
-                    pw = get_password(PASSWORD_CMD_KDE, "KDE")  # may raise error
-                    return decrypt(password, encrypyed_key, b"v11", 1)
+                    return decrypt(pw, encryted_key, b"v11", 1)
                 elif data["safeStorageBackend"] in [
                         "gnome_libsecret", "kwallet", "kwallet5", "kwallet6"]:
                     pw = get_password(PASSWORD_CMD_KDE, "KDE")  # may raise error
-                    return decrypt(password, encrypyed_key, b"v11", 1)
+                    return decrypt(pw, encryted_key, b"v11", 1)
                 else:
                     secho("Your Signal data key is encrypted, and requires a password.")
                     secho(f"The safe storage backend is {data['safeStorageBackend']}")

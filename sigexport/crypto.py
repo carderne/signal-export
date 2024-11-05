@@ -15,7 +15,7 @@ from typer import colors, secho
 
 PASSWORD_CMD_DARWIN = ["security", "find-generic-password", "-ws", "Signal Safe Storage"]
 PASSWORD_CMD_GNOME = ["secret-tool", "lookup", "application", "Signal"]
-PASSWARD_CMD_KDE = ["kwallet-query", "kdewallet", "-f",
+PASSWORD_CMD_KDE = ["kwallet-query", "kdewallet", "-f",
                     "Chromium Keys", "-r", "Chromium Safe Storage"]
 
 

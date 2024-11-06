@@ -89,7 +89,7 @@ def get_password(cmd: list[str], system: str) -> Optional[str]:
         cmd: shell command as list of words
         system: Name of the system we are on, for help message.
     Returns:
-        password if found, None otherwise
+        password if found
     Raises:
         nondescript error: if no password was found
     """

@@ -15,7 +15,7 @@ from typer import colors, secho
 
 PASSWORD_CMD_DARWIN = ["security", "find-generic-password", "-ws", "Signal Safe Storage"]
 PASSWORD_CMD_GNOME = ["secret-tool", "lookup", "application", "Signal"]
-PASSWARD_CMD_KDE = ["kwallet-query", "kdewallet", "-f",
+PASSWORD_CMD_KDE = ["kwallet-query", "kdewallet", "-f",
                     "Chromium Keys", "-r", "Chromium Safe Storage"]
 
 
@@ -39,7 +39,7 @@ def get_key(file: Path, password: Optional[str]) -> str:
     if "key" in data:
         return data["key"]
     elif "encryptedKey" in data:
-        encrypyed_key = data["encryptedKey"]
+        encrypted_key = data["encryptedKey"]
         if sys.platform == "win32":
             secho(
                 "Signal decryption isn't currently supported on Windows"
@@ -48,21 +48,20 @@ def get_key(file: Path, password: Optional[str]) -> str:
             )
         if sys.platform == "darwin":
             if password:
-                return decrypt(password, encrypyed_key, b"v10", 1003)
+                return decrypt(password, encrypted_key, b"v10", 1003)
             pw = get_password(PASSWORD_CMD_DARWIN, "macOS")  # may raise error
-            return decrypt(pw, encrypyed_key, b"v10", 1003)
+            return decrypt(pw, encrypted_key, b"v10", 1003)
         else:  # linux
             if password:
-                return decrypt(password, encrypyed_key, b"v11", 1)
+                return decrypt(password, encrypted_key, b"v11", 1)
             elif "safeStorageBackend" in data:
                 if data["safeStorageBackend"] == "gnome_libsecret":
                     pw = get_password(PASSWORD_CMD_GNOME, "gnome")  # may raise error
-                    pw = get_password(PASSWORD_CMD_KDE, "KDE")  # may raise error
-                    return decrypt(password, encrypyed_key, b"v11", 1)
+                    return decrypt(pw, encrypted_key, b"v11", 1)
                 elif data["safeStorageBackend"] in [
                         "gnome_libsecret", "kwallet", "kwallet5", "kwallet6"]:
                     pw = get_password(PASSWORD_CMD_KDE, "KDE")  # may raise error
-                    return decrypt(password, encrypyed_key, b"v11", 1)
+                    return decrypt(pw, encrypted_key, b"v11", 1)
                 else:
                     secho("Your Signal data key is encrypted, and requires a password.")
                     secho(f"The safe storage backend is {data['safeStorageBackend']}")
@@ -90,7 +89,7 @@ def get_password(cmd: list[str], system: str) -> Optional[str]:
         cmd: shell command as list of words
         system: Name of the system we are on, for help message.
     Returns:
-        password if found, None otherwise
+        password if found
     Raises:
         nondescript error: if no password was found
     """

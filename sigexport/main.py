@@ -6,7 +6,7 @@ from typing import Optional
 
 from typer import Argument, Context, Exit, Option, colors, run, secho
 
-from sigexport import create, data, files, html, logging, merge, utils
+from sigexport import create, data, files, html, signal_logging, merge, utils
 
 OptionalPath = Optional[Path]
 OptionalStr = Optional[str]
@@ -56,7 +56,7 @@ def main(
 
         sigexport ~/outputdir
     """
-    logging.verbose = verbose
+    signal_logging.verbose = verbose
 
     if not any((dest, list_chats)):
         secho(ctx.get_help())

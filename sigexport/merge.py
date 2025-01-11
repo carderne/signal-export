@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 
 from sigexport import files, models, utils
-from sigexport.logging import log
+from sigexport.signal_logging import log
 
 
 def lines_to_msgs(lines: list[str]) -> list[models.MergeMessage]:

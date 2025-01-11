@@ -8,7 +8,7 @@ from sqlcipher3 import dbapi2
 from typer import Exit, colors, secho
 
 from sigexport import crypto, models
-from sigexport.logging import log
+from sigexport.signal_logging import log
 
 
 def fetch_data(

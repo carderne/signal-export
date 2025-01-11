@@ -9,7 +9,7 @@ from Crypto.Cipher import AES
 from typer import colors, secho
 
 from sigexport import models
-from sigexport.logging import log
+from sigexport.signal_logging import log
 
 CIPHER_KEY_SIZE = 32
 IV_SIZE = AES.block_size

@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from typer import secho
 
 from sigexport import models, templates
-from sigexport.logging import log
+from sigexport.signal_logging import log
 
 
 def prep_html(dest: Path) -> None:

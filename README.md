@@ -69,6 +69,7 @@ You can add `--source /path/to/source/dir/` if the script doesn't manage to find
 Default locations per OS are below.
 The directory should contain a folder called `sql` with `db.sqlite` inside it.
 - Linux: `~/.config/Signal/`
+- Linux Flatpak: `~/.var/app/org.signal.Signal/config/Signal`
 - macOS: `~/Library/Application Support/Signal/`
 - Windows: `~/AppData/Roaming/Signal/`
 

@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 from sigexport import models, utils
@@ -47,7 +48,7 @@ def create_message(
     for att in msg.attachments:
         file_name = att["fileName"]
         path = Path("media") / file_name
-        path = Path(str(path).replace(" ", "%20"))
+        path = Path(re.sub(r"\s", "%20", str(path)))
         attachments.append(models.Attachment(name=file_name, path=str(path)))
 
     reactions: list[models.Reaction] = []

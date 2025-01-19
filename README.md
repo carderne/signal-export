@@ -42,6 +42,13 @@ python -m sigexport C:\Temp\SignalExport
 ## 🪟 Installation: Windows
 If you need step-by-step instructions on things like enabling WSL2, please see the dedicated [Windows Installation](./INSTALLATION.md) instructions.
 
+## Installation nix/nixOS
+`signal-export` is packaged in nixpkgs, so you can run
+```bash
+nix-shell -I nixpkgs=channel:nixpkgs-unstable --packages signal-export --command 'sigexport ~/signal-chats'
+```
+)
+
 ## 🚀 Usage
 Please fully exit your Signal app before proceeding, otherwise you will likely encounter an `I/O disk` error, due to the message database being made read-only, as it was being accessed by the app.
 

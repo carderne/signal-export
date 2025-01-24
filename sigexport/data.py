@@ -20,11 +20,10 @@ def fetch_data(
 ) -> tuple[models.Convos, models.Contacts]:
     """Load SQLite data into dicts."""
     db_file = source_dir / "sql" / "db.sqlite"
-    signal_config = source_dir / "config.json"
 
     if key is None:
         try:
-            key = crypto.get_key(signal_config, password)
+            key = crypto.get_key(source_dir, password)
         except Exception:
             secho("Failed to decrypt Signal password", fg=colors.RED)
             raise Exit(1)

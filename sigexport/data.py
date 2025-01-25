@@ -25,8 +25,8 @@ def fetch_data(
     if key is None:
         try:
             key = crypto.get_key(signal_config, password)
-        except Exception:
-            secho("Failed to decrypt Signal password", fg=colors.RED)
+        except Exception as e:
+            secho(f"Failed to decrypt Signal password: {e}", fg=colors.RED)
             raise Exit(1)
 
     log(f"Fetching data from {db_file}\n")

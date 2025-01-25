@@ -48,30 +48,33 @@ def get_key(appdir: Path, password: Optional[str]) -> str:
     elif "encryptedKey" in data:
         encrypted_key = data["encryptedKey"]
         if sys.platform == "win32":
-            with open(appdir / "Local State", encoding="utf-8") as lsf:
-                data = json.loads(lsf.read())
-            if "os_crypt" in data and "encrypted_key" in data["os_crypt"]:
-                pw_encrypted_b64 = data["os_crypt"]["encrypted_key"]
-            else:
-                secho("Encrypted password not found in Local State", fg=colors.RED)
-                raise
+            if not password:
+                with open(appdir / "Local State", encoding="utf-8") as lsf:
+                    data = json.loads(lsf.read())
+                if "os_crypt" in data and "encrypted_key" in data["os_crypt"]:
+                    pw_encrypted_b64 = data["os_crypt"]["encrypted_key"]
+                else:
+                    secho("Encrypted password not found in Local State", fg=colors.RED)
+                    raise
 
-            # base64decode the encrypted password, and cut off the first 5 bytes ('D' 'P' 'A' 'P' 'I')
-            pw_encrypted = b64decode(pw_encrypted_b64)[5:]
+                # base64decode the encrypted password, and cut off the first 5 bytes ('D' 'P' 'A' 'P' 'I')
+                pw_encrypted = b64decode(pw_encrypted_b64)[5:]
 
-            #decrypt the password
-            data_in = DATA_BLOB(len(pw_encrypted), c_buffer(pw_encrypted, len(pw_encrypted)))
-            data_out = DATA_BLOB()
-            if windll.crypt32.CryptUnprotectData(byref(data_in), None, None, None, None, 0, byref(data_out)):
-                cbData = int(data_out.cbData)
-                pbData = data_out.pbData
-                buffer = c_buffer(cbData)
-                cdll.msvcrt.memcpy(buffer, pbData, cbData)
-                windll.kernel32.LocalFree(pbData)
-                pw = buffer.raw
+                #decrypt the password
+                data_in = DATA_BLOB(len(pw_encrypted), c_buffer(pw_encrypted, len(pw_encrypted)))
+                data_out = DATA_BLOB()
+                if windll.crypt32.CryptUnprotectData(byref(data_in), None, None, None, None, 0, byref(data_out)):
+                    cbData = int(data_out.cbData)
+                    pbData = data_out.pbData
+                    buffer = c_buffer(cbData)
+                    cdll.msvcrt.memcpy(buffer, pbData, cbData)
+                    windll.kernel32.LocalFree(pbData)
+                    pw = buffer.raw
+                else:
+                    secho("Failed to decrypt password", fg=colors.RED)
+                    raise
             else:
-                secho("Failed to decrypt password", fg=colors.RED)
-                raise
+                pw = bytearray.fromhex(password)
 
             # The encrypted key consists of the following parts:
             # 3 bytes header ('V' '1' '0')

@@ -47,7 +47,8 @@ If you need step-by-step instructions on things like enabling WSL2, please see t
 ```bash
 nix-shell -I nixpkgs=channel:nixpkgs-unstable --packages signal-export --command 'sigexport ~/signal-chats'
 ```
-)
+
+If you get an error message about `secret-tool` not being found, you probably need to install `libsecret-tools` via your Linux package manager.
 
 ## 🚀 Usage
 Please fully exit your Signal app before proceeding, otherwise you will likely encounter an `I/O disk` error, due to the message database being made read-only, as it was being accessed by the app.

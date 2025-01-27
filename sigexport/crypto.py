@@ -13,16 +13,27 @@ from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Util.Padding import unpad
 from typer import colors, secho
 
-PASSWORD_CMD_DARWIN = ["security", "find-generic-password", "-ws", "Signal Safe Storage"]
+PASSWORD_CMD_DARWIN = [
+    "security",
+    "find-generic-password",
+    "-ws",
+    "Signal Safe Storage",
+]
 PASSWORD_CMD_GNOME = ["secret-tool", "lookup", "application", "Signal"]
-PASSWORD_CMD_KDE = ["kwallet-query", "kdewallet", "-f",
-                    "Chromium Keys", "-r", "Chromium Safe Storage"]
+PASSWORD_CMD_KDE = [
+    "kwallet-query",
+    "kdewallet",
+    "-f",
+    "Chromium Keys",
+    "-r",
+    "Chromium Safe Storage",
+]
 
 
-def get_key(file: Path, password: Optional[str]) -> str:
+def get_key(file: Path, password: Optional[str]) -> Optional[str]:
     """Get key for decrypting database.
 
-    Retreives key depending on key encryption software.
+    Retrieves key depending on key encryption software.
 
     If it cannot be decrypted, print an explanation message.
 
@@ -30,9 +41,7 @@ def get_key(file: Path, password: Optional[str]) -> str:
         file: Signal config json file path
         password: password that user could have supplied to decrypt key
     Returns:
-        (decrypted) password
-    Raises:
-        non-specified exception if no decrypted password is available.
+        (decrypted) password or None
     """
     with open(file, encoding="utf-8") as f:
         data = json.loads(f.read())
@@ -59,30 +68,39 @@ def get_key(file: Path, password: Optional[str]) -> str:
                     pw = get_password(PASSWORD_CMD_GNOME, "gnome")  # may raise error
                     return decrypt(pw, encrypted_key, b"v11", 1)
                 elif data["safeStorageBackend"] in [
-                        "gnome_libsecret", "kwallet", "kwallet5", "kwallet6"]:
+                    "gnome_libsecret",
+                    "kwallet",
+                    "kwallet5",
+                    "kwallet6",
+                ]:
                     pw = get_password(PASSWORD_CMD_KDE, "KDE")  # may raise error
                     return decrypt(pw, encrypted_key, b"v11", 1)
                 else:
                     secho("Your Signal data key is encrypted, and requires a password.")
                     secho(f"The safe storage backend is {data['safeStorageBackend']}")
-                    secho("If you know some Python and know how to retreive passwords "
-                          "from this backend, please contribute a PR!")
+                    secho(
+                        "If you know some Python and know how to retrieve passwords "
+                        "from this backend, please contribute a PR!"
+                    )
             else:
                 secho("Your Signal data key is encrypted, and requires a password.")
                 secho(f"No safe storage backend is specified.")
-                secho("On gnome, you can usually retreive the password with the command")
+                secho(
+                    "On gnome, you can usually retrieve the password with the command"
+                )
                 secho(" ".join(PASSWORD_CMD_GNOME) + "\n", fg=colors.BLUE)
                 secho("On KDE, you can usually retreive the password with the command")
                 secho(" ".join(PASSWORD_CMD_KDE) + "\n", fg=colors.BLUE)
-                secho("If you have found your password, please rerun sigexport as follows:")
+                secho(
+                    "If you have found your password, please rerun sigexport as follows:"
+                )
                 secho("sigexport --password=PASSWORD_FROM_COMMAND ...", fg=colors.BLUE)
                 secho("No Signal decryption key found", fg=colors.RED)
     else:
         secho("No Signal decryption key found", fg=colors.RED)
-    raise
 
 
-def get_password(cmd: list[str], system: str) -> Optional[str]:
+def get_password(cmd: list[str], system: str) -> str:
     """Call external tool to get key password.
 
     Args:
@@ -93,14 +111,24 @@ def get_password(cmd: list[str], system: str) -> Optional[str]:
     Raises:
         nondescript error: if no password was found
     """
-    p = subprocess.run(  # NoQA: S603
-        cmd, capture_output=True, text=True, encoding="utf-8")
+    try:
+        p = subprocess.run(  # NoQA: S603
+            cmd, capture_output=True, text=True, encoding="utf-8"
+        )
+    except FileNotFoundError as e:
+        secho(
+            f"When trying to retrieve the password, '{e.filename}' was not found. " 
+            "You may need to install the respective package."
+        )
+        raise
     if p.returncode != 0:
         secho("Your Signal data key is encrypted, and requires a password.")
         secho(f"Usually on {system}, you can try to get it with this command:")
         secho(" ".join(cmd) + "\n", fg=colors.BLUE)
-        secho("But this failed with errorcode "
-              f"{p.returncode} and error {p.stdout} {p.stderr}")
+        secho(
+            "But this failed with errorcode "
+            f"{p.returncode} and error {p.stdout} {p.stderr}"
+        )
         secho("If you have found your password, please rerun sigexport as follows:")
         secho("sigexport --password=PASSWORD_FROM_COMMAND ...", fg=colors.BLUE)
         secho("No Signal decryption key found", fg=colors.RED)

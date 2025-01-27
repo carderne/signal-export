@@ -7,6 +7,15 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+if sys.platform == "win32":
+    from base64 import b64decode
+    from ctypes import *
+    from ctypes.wintypes import DWORD
+
+    class DataBlob(Structure):
+        _fields_ = [("cbData", DWORD), ("pbData", POINTER(c_char))]
+
+
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA1
 from Crypto.Protocol.KDF import PBKDF2
@@ -30,7 +39,7 @@ PASSWORD_CMD_KDE = [
 ]
 
 
-def get_key(file: Path, password: Optional[str]) -> Optional[str]:
+def get_key(appdir: Path, password: Optional[str]) -> Optional[str]:
     """Get key for decrypting database.
 
     Retrieves key depending on key encryption software.
@@ -43,18 +52,56 @@ def get_key(file: Path, password: Optional[str]) -> Optional[str]:
     Returns:
         (decrypted) password or None
     """
-    with open(file, encoding="utf-8") as f:
-        data = json.loads(f.read())
+
+    with open(appdir / "config.json", encoding="utf-8") as cf:
+        data = json.loads(cf.read())
     if "key" in data:
         return data["key"]
     elif "encryptedKey" in data:
         encrypted_key = data["encryptedKey"]
         if sys.platform == "win32":
-            secho(
-                "Signal decryption isn't currently supported on Windows"
-                "If you know some Python and crypto, please contribute a PR!",
-                fg=colors.RED,
-            )
+            if not password:
+                with open(appdir / "Local State", encoding="utf-8") as lsf:
+                    data = json.loads(lsf.read())
+                if "os_crypt" in data and "encrypted_key" in data["os_crypt"]:
+                    pw_encrypted_b64 = data["os_crypt"]["encrypted_key"]
+                else:
+                    secho("Encrypted password not found in Local State", fg=colors.RED)
+                    raise
+
+                # base64decode the encrypted password, and cut off the first 5 bytes ('D' 'P' 'A' 'P' 'I')
+                pw_encrypted = b64decode(pw_encrypted_b64)[5:]
+
+                # decrypt the password
+                data_in = DataBlob(
+                    len(pw_encrypted), c_buffer(pw_encrypted, len(pw_encrypted))
+                )
+                data_out = DataBlob()
+                if windll.crypt32.CryptUnprotectData(
+                    byref(data_in), None, None, None, None, 0, byref(data_out)
+                ):
+                    cbData = int(data_out.cbData)
+                    pbData = data_out.pbData
+                    buffer = c_buffer(cbData)
+                    cdll.msvcrt.memcpy(buffer, pbData, cbData)
+                    windll.kernel32.LocalFree(pbData)
+                    pw = buffer.raw
+                else:
+                    secho("Failed to decrypt password", fg=colors.RED)
+                    raise
+            else:
+                pw = bytearray.fromhex(password)
+
+            # The encrypted key consists of the following parts:
+            # 3 bytes header ('V' '1' '0')
+            # 12 bytes nonce
+            # 64 bytes encrypted data
+            # 16 bytes MAC
+            encryptedKey_struct = memoryview(bytearray.fromhex(encrypted_key))
+            key = AES.new(
+                pw, AES.MODE_GCM, nonce=encryptedKey_struct[3:15]
+            ).decrypt_and_verify(encryptedKey_struct[15:79], encryptedKey_struct[79:])
+            return key.decode("ascii")
         if sys.platform == "darwin":
             if password:
                 return decrypt(password, encrypted_key, b"v10", 1003)

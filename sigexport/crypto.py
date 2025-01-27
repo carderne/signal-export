@@ -11,8 +11,10 @@ if sys.platform == "win32":
     from base64 import b64decode
     from ctypes import *
     from ctypes.wintypes import DWORD
-    class DATA_BLOB(Structure):
+
+    class DataBlob(Structure):
         _fields_ = [("cbData", DWORD), ("pbData", POINTER(c_char))]
+
 
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA1
@@ -35,6 +37,7 @@ PASSWORD_CMD_KDE = [
     "-r",
     "Chromium Safe Storage",
 ]
+
 
 def get_key(appdir: Path, password: Optional[str]) -> Optional[str]:
     """Get key for decrypting database.
@@ -69,10 +72,14 @@ def get_key(appdir: Path, password: Optional[str]) -> Optional[str]:
                 # base64decode the encrypted password, and cut off the first 5 bytes ('D' 'P' 'A' 'P' 'I')
                 pw_encrypted = b64decode(pw_encrypted_b64)[5:]
 
-                #decrypt the password
-                data_in = DATA_BLOB(len(pw_encrypted), c_buffer(pw_encrypted, len(pw_encrypted)))
-                data_out = DATA_BLOB()
-                if windll.crypt32.CryptUnprotectData(byref(data_in), None, None, None, None, 0, byref(data_out)):
+                # decrypt the password
+                data_in = DataBlob(
+                    len(pw_encrypted), c_buffer(pw_encrypted, len(pw_encrypted))
+                )
+                data_out = DataBlob()
+                if windll.crypt32.CryptUnprotectData(
+                    byref(data_in), None, None, None, None, 0, byref(data_out)
+                ):
                     cbData = int(data_out.cbData)
                     pbData = data_out.pbData
                     buffer = c_buffer(cbData)
@@ -91,8 +98,10 @@ def get_key(appdir: Path, password: Optional[str]) -> Optional[str]:
             # 64 bytes encrypted data
             # 16 bytes MAC
             encryptedKey_struct = memoryview(bytearray.fromhex(encrypted_key))
-            key = AES.new(pw, AES.MODE_GCM, nonce=encryptedKey_struct[3:15]).decrypt_and_verify(encryptedKey_struct[15:79], encryptedKey_struct[79:])
-            return key.decode('ascii')
+            key = AES.new(
+                pw, AES.MODE_GCM, nonce=encryptedKey_struct[3:15]
+            ).decrypt_and_verify(encryptedKey_struct[15:79], encryptedKey_struct[79:])
+            return key.decode("ascii")
         if sys.platform == "darwin":
             if password:
                 return decrypt(password, encrypted_key, b"v10", 1003)

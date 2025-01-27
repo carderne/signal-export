@@ -83,6 +83,11 @@ select = [
     "Q",
     "ANN",
 ]
+ignore = [
+    "E501",
+    "N806",
+    "N815",
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["sigexport"]

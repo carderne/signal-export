@@ -3,10 +3,10 @@ from datetime import datetime
 from importlib.metadata import version
 from pathlib import Path
 from typing import Any, TypedDict, Union, cast
-from typing_extensions import TypeGuard
 
 import emoji
 from typer import Exit, secho
+from typing_extensions import TypeGuard
 
 from sigexport import models
 

@@ -84,7 +84,7 @@ def get_key(file: Path, password: Optional[str]) -> Optional[str]:
                     )
             else:
                 secho("Your Signal data key is encrypted, and requires a password.")
-                secho(f"No safe storage backend is specified.")
+                secho("No safe storage backend is specified.")
                 secho(
                     "On gnome, you can usually retrieve the password with the command"
                 )
@@ -117,7 +117,7 @@ def get_password(cmd: list[str], system: str) -> str:
         )
     except FileNotFoundError as e:
         secho(
-            f"When trying to retrieve the password, '{e.filename}' was not found. " 
+            f"When trying to retrieve the password, '{e.filename}' was not found. "
             "You may need to install the respective package."
         )
         raise

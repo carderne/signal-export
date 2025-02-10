@@ -45,6 +45,11 @@ def merge_chat(new: list[models.Message], path_old: Path) -> list[models.Message
     # get rid of duplicates
     msg_dict = {m.comp(): m for m in old_msgs + new}
     merged = list(msg_dict.values())
+    
+    def get_date(val: any):
+        return val.date
+    
+    merged.sort(key=get_date)
 
     return merged
 

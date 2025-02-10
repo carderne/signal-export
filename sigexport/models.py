@@ -126,7 +126,7 @@ class Message:
 
     def comp(self: Message) -> tuple[datetime, str, str]:
         date = self.date.replace(second=0, microsecond=0)
-        return (date, self.sender, self.body.replace("\n", "").replace(">", ""))
+        return (date, self.sender, self.body.replace("\n", "").replace(">", "").strip())
 
     def dict(self: Message) -> dict:
         msg_dict = asdict(self)

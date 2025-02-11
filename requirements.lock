@@ -32,7 +32,10 @@ shellingham==1.5.4
     # via typer
 soupsieve==2.5
     # via beautifulsoup4
-sqlcipher3-wheels==0.5.2.post1
+#sqlcipher3-wheels==0.5.2.post1
+#sqlcipher3-wheels==0.5.6
+sqlcipher3-wheels
+#sqlcipher3-binary
     # via signal-export
 typer==0.12.5
     # via signal-export

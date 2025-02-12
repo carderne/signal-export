@@ -34,7 +34,7 @@ dependencies = [
     "Markdown ~= 3.4",
     "typer >= 0.12.1",
     "pycryptodome ~= 3.20",
-    "sqlcipher3-wheels >= 0.5.2.post1",
+    "sqlcipher3-wheels >= 0.5.4",
 ]
 
 [tool.rye]

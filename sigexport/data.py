@@ -68,8 +68,6 @@ def fetch_data(
 
     query = "SELECT json, conversationId FROM messages ORDER BY sent_at"
     c.execute(query)
-    ## yarko:
-    # from IPython import embed; embed()
     for result in c:
         res = json.loads(result[0])
         cid = result[1]

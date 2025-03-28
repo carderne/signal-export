@@ -66,32 +66,32 @@ def fetch_data(
         if not chats or (result[4] in chats_list or result[5] in chats_list):
             convos[cid] = []
 
-    query = "SELECT json, conversationId FROM messages ORDER BY sent_at"
+    query = "SELECT conversationId, type, json, id, body, sourceServiceId, timestamp, sent_at, serverTimestamp, hasAttachments, readStatus, seenStatus, json FROM messages ORDER BY sent_at"
     c.execute(query)
     for result in c:
-        res = json.loads(result[0])
-        cid = result[1]
+        cid = result[0]
+        type = result[1]
+        jsonLoaded = json.loads(result[2])
         if cid and cid in convos:
-            if res.get("type") in ["keychange", "profile-change", None]:
+            if type in ["keychange", "profile-change", None]:
                 continue
             con = models.RawMessage(
-                conversation_id=res["conversationId"],
-                id=res["id"],
-                type=res.get("type"),
-                body=res.get("body", ""),
-                contact=res.get("contact"),
-                source=res.get("sourceServiceId"),
-                timestamp=res.get("timestamp"),
-                sent_at=res.get("sent_at"),
-                server_timestamp=res.get("serverTimestamp"),
-                has_attachments=res.get("has_attachments", False),
-                attachments=res.get("attachments", []),
-                read_status=res.get("read_status"),
-                seen_status=res.get("seen_status"),
-                call_history=res.get("call_history"),
-                reactions=res.get("reactions", []),
-                sticker=res.get("sticker"),
-                quote=res.get("quote"),
+                conversation_id=cid,
+                id=result[3],
+                type=type,
+                body=result[4],
+                source=result[5],
+                timestamp=result[6],
+                sent_at=result[7],
+                server_timestamp=result[8],
+                has_attachments=result[9],
+                attachments=jsonLoaded.get("attachments", []),
+                read_status=result[10],
+                seen_status=result[11],
+                call_history=jsonLoaded.get("call_history"),
+                reactions=jsonLoaded.get("reactions", []),
+                sticker=jsonLoaded.get("sticker"),
+                quote=jsonLoaded.get("quote"),
             )
             convos[cid].append(con)
 

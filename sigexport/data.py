@@ -17,6 +17,7 @@ def fetch_data(
     key: Optional[str],
     chats: str,
     include_empty: bool,
+    include_disappearing: bool,
 ) -> tuple[models.Convos, models.Contacts]:
     """Load SQLite data into dicts."""
     db_file = source_dir / "sql" / "db.sqlite"
@@ -66,7 +67,7 @@ def fetch_data(
         if not chats or (result[4] in chats_list or result[5] in chats_list):
             convos[cid] = []
 
-    query = "SELECT conversationId, type, json, id, body, sourceServiceId, timestamp, sent_at, serverTimestamp, hasAttachments, readStatus, seenStatus, json FROM messages ORDER BY sent_at"
+    query = "SELECT conversationId, type, json, id, body, sourceServiceId, timestamp, sent_at, serverTimestamp, hasAttachments, readStatus, seenStatus, expireTimer FROM messages ORDER BY sent_at"
     c.execute(query)
     for result in c:
         cid = result[0]
@@ -74,6 +75,9 @@ def fetch_data(
         jsonLoaded = json.loads(result[2])
         if cid and cid in convos:
             if type in ["keychange", "profile-change", None]:
+                continue
+            expireTimer = result[12]
+            if expireTimer and not include_disappearing:
                 continue
             con = models.RawMessage(
                 conversation_id=cid,

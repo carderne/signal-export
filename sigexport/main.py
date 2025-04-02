@@ -39,6 +39,11 @@ def main(
     include_empty: bool = Option(
         False, "--include-empty", help="Whether to include empty chats"
     ),
+    include_disappearing: bool = Option(
+        False,
+        "--include-disappearing",
+        help="Whether to include disappearing messages",
+    ),
     overwrite: bool = Option(
         False,
         "--overwrite/--no-overwrite",
@@ -79,6 +84,7 @@ def main(
         key=key,
         chats=chats,
         include_empty=include_empty,
+        include_disappearing=include_disappearing,
     )
 
     if list_chats:

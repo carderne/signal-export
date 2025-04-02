@@ -15,7 +15,6 @@ class RawMessage:
 
     body: str
     type: str | None
-    contact: str | None
     source: Any | None
 
     timestamp: int | None

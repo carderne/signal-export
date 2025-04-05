@@ -29,6 +29,8 @@ This is converted to HTML at the end so it can be opened with any web browser. T
 2. Install this package:
 ```bash
 pip install signal-export
+
+# ...if you have the "pipx" command available, you're probably better off installing with "pipx install signal-export"
 ```
 
 3. Then run the script!

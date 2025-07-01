@@ -76,10 +76,10 @@ def fetch_data(
     c.execute(query)
     for result in c:
         cid = result[0]
-        type = result[1]
+        _type = result[1]
         jsonLoaded = json.loads(result[2])
         if cid and cid in convos:
-            if type in ["keychange", "profile-change", None]:
+            if _type in ["keychange", "profile-change", None]:
                 continue
             expireTimer = result[12]
             if expireTimer and not include_disappearing:
@@ -87,7 +87,7 @@ def fetch_data(
             con = models.RawMessage(
                 conversation_id=cid,
                 id=result[3],
-                type=type,
+                type=_type,
                 body=result[4],
                 source=result[5],
                 timestamp=result[6],
@@ -108,9 +108,6 @@ def fetch_data(
         convos = {key: val for key, val in convos.items() if len(val) > 0}
 
     owner_id = c.execute("select ourServiceId from sessions").fetchone()[0]
-    contact_by_service_id: models.Contacts = {
-        c.serviceId: c
-        for c in contacts.values()
-    }
+    contact_by_service_id: models.Contacts = {c.serviceId: c for c in contacts.values()}
 
     return convos, contacts, contact_by_service_id[owner_id]

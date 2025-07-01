@@ -1,12 +1,17 @@
 """Main script for sigexport."""
-
+import csv
+import os
 import shutil
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+import json
 from typer import Argument, Context, Exit, Option, colors, run, secho
 
 from sigexport import create, data, files, html, logging, merge, utils
+from sigexport.models import Contact
+from sigexport.models import Contacts
 
 OptionalPath = Optional[Path]
 OptionalStr = Optional[str]
@@ -50,6 +55,7 @@ def main(
         help="Overwrite contents of output directory if it exists",
     ),
     verbose: bool = Option(False, "--verbose", "-v"),
+    network_only: bool = Option(False, '--network-only'),
     _: bool = Option(False, "--version", callback=utils.version_callback),
 ) -> None:
     """
@@ -78,7 +84,7 @@ def main(
         secho(f"Error: config.json not found in directory {source_dir}")
         raise Exit(code=1)
 
-    convos, contacts = data.fetch_data(
+    convos, contacts, owner = data.fetch_data(
         source_dir,
         password=password,
         key=key,
@@ -86,6 +92,10 @@ def main(
         include_empty=include_empty,
         include_disappearing=include_disappearing,
     )
+
+    if network_only:
+        export_channel_metadata(dest, contacts, owner, chats.split(","))
+        raise Exit()
 
     if list_chats:
         names = sorted(v.name for v in contacts.values() if v.name is not None)
@@ -160,6 +170,64 @@ def main(
 
     secho("Done!", fg=colors.GREEN)
 
+
+def export_channel_metadata(
+    dest: Path, contacts: Contacts, owner: Contact, include_chats: list[str] = None
+):
+    contacts_by_serviceId = {
+        c.serviceId: c
+        for c in
+        contacts.values()
+    }
+    all_groups = [g for g in contacts.values() if g.is_group]
+    for key, c in contacts.items():
+        if not c.is_group:
+            continue
+        if include_chats is not None and c.name not in include_chats:
+            continue
+        # ensure that the output folder for this channel exists
+        os.makedirs(dest / c.name, exist_ok=True)
+        members = [contacts_by_serviceId[m] for m in c.members]
+        group_meta = {
+            "name": c.name,
+            "exported_by": owner.profile_name,
+            "exported_on": datetime.now().isoformat(),
+            "members": [
+                {
+                    "name": member.name,
+                    "display_name": member.profile_name,
+                    "number": member.number,
+                    "other_groups": [
+                        g.name for g in all_groups
+                        # if the other group has this member too
+                        if member.serviceId in g.members
+                        # but not if we're looking at the current group
+                        if key != g.id
+                        # redact the owner's group memberships
+                        and member.serviceId != owner.serviceId
+                    ]
+                } for member in members
+            ]
+        }
+        flat_meta = [
+            {
+                "group_name": group_meta["name"],
+                "exported_by": group_meta["exported_by"],
+                "exported_on": group_meta["exported_on"],
+                "num_shared_groups": len(m["other_groups"]),
+                **m
+            } for m in group_meta["members"]
+        ]
+
+        members_json_path = dest / c.name / "meta.json"
+        with open(members_json_path, "w", encoding="utf-8") as members_json:
+            json.dump(group_meta, members_json, ensure_ascii=False, indent=2)
+
+        members_csv_path = dest / c.name / "members.csv"
+        with (open(members_csv_path, "w", encoding="utf-8") as members_csv):
+            writer = csv.DictWriter(members_csv, fieldnames=flat_meta[0].keys())
+            writer.writeheader()
+            writer.writerows(flat_meta)
 
 def cli() -> None:
     """cli."""

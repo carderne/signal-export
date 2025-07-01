@@ -18,8 +18,13 @@ def fetch_data(
     chats: str,
     include_empty: bool,
     include_disappearing: bool,
-) -> tuple[models.Convos, models.Contacts]:
-    """Load SQLite data into dicts."""
+) -> tuple[models.Convos, models.Contacts, models.Contact]:
+    """Load SQLite data into dicts.
+    :returns: a tuple of:
+        all conversations,
+        all contacts,
+        the contact object of the db owner
+    """
     db_file = source_dir / "sql" / "db.sqlite"
 
     if key is None:
@@ -52,7 +57,7 @@ def fetch_data(
             members = result[6].split(" ")
         is_group = result[0] == "group"
         cid = result[1]
-        contacts[cid] = models.Contact(
+        contact = models.Contact(
             id=cid,
             serviceId=result[2],
             name=result[4],
@@ -61,9 +66,9 @@ def fetch_data(
             members=members,
             is_group=is_group,
         )
-        if contacts[cid].name is None:
-            contacts[cid].name = contacts[cid].profile_name
-
+        if contact.name is None:
+            contact.name = contact.profile_name
+        contacts[cid] = contact
         if not chats or (result[4] in chats_list or result[5] in chats_list):
             convos[cid] = []
 
@@ -102,4 +107,10 @@ def fetch_data(
     if not include_empty:
         convos = {key: val for key, val in convos.items() if len(val) > 0}
 
-    return convos, contacts
+    owner_id = c.execute("select ourServiceId from sessions").fetchone()[0]
+    contact_by_service_id: models.Contacts = {
+        c.serviceId: c
+        for c in contacts.values()
+    }
+
+    return convos, contacts, contact_by_service_id[owner_id]

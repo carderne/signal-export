@@ -9,7 +9,7 @@ from typing import Optional
 
 if sys.platform == "win32":
     from base64 import b64decode
-    from ctypes import *
+    from ctypes import *  # pyright: ignore [reportWildcardImportFromLibrary]
     from ctypes.wintypes import DWORD
 
     class DataBlob(Structure):

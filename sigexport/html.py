@@ -45,12 +45,12 @@ def create_html(
             nav += "<nav>"
             nav += "<div class=prev>"
             if page_num != 0:
-                nav += f"<a href=#pg{page_num-1}>PREV</a>"
+                nav += f"<a href=#pg{page_num - 1}>PREV</a>"
             else:
                 nav += "PREV"
             nav += "</div><div class=next>"
             if page_num != last_page:
-                nav += f"<a href=#pg{page_num+1}>NEXT</a>"
+                nav += f"<a href=#pg{page_num + 1}>NEXT</a>"
             else:
                 nav += "NEXT"
             nav += "</div></nav>\n"

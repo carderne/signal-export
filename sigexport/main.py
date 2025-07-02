@@ -7,6 +7,7 @@ from typing import Optional
 from typer import Argument, Context, Exit, Option, colors, run, secho
 
 from sigexport import create, data, files, html, logging, merge, utils
+from sigexport.export_channel_metadata import export_channel_metadata
 
 OptionalPath = Optional[Path]
 OptionalStr = Optional[str]
@@ -50,6 +51,11 @@ def main(
         help="Overwrite contents of output directory if it exists",
     ),
     verbose: bool = Option(False, "--verbose", "-v"),
+    channel_members_only: bool = Option(
+        False,
+        "--chat-members",
+        help="Export membership information for all chats (or for a subset of chats given by the --chats option)",
+    ),
     _: bool = Option(False, "--version", callback=utils.version_callback),
 ) -> None:
     """
@@ -78,7 +84,7 @@ def main(
         secho(f"Error: config.json not found in directory {source_dir}")
         raise Exit(code=1)
 
-    convos, contacts = data.fetch_data(
+    convos, contacts, owner = data.fetch_data(
         source_dir,
         password=password,
         key=key,
@@ -90,6 +96,10 @@ def main(
     if list_chats:
         names = sorted(v.name for v in contacts.values() if v.name is not None)
         secho(" | ".join(names))
+        raise Exit()
+
+    if channel_members_only:
+        export_channel_metadata(dest, contacts, owner, chats.split(","))
         raise Exit()
 
     dest = Path(dest).expanduser()

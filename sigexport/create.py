@@ -60,8 +60,7 @@ def create_message(
                 )
             except KeyError:
                 log(
-                    f"\t\tReaction fromId not found in contacts: "
-                    f"[{date}] {sender}: {r}"
+                    f"\t\tReaction fromId not found in contacts: [{date}] {sender}: {r}"
                 )
 
     sticker = ""

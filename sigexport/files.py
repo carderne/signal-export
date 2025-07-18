@@ -188,6 +188,7 @@ def copy_attachments(
                         .replace(",", "")
                         .replace(":", "-")
                         .replace("|", "-")
+                        .replace("*", "_")
                     )
                     # account for erroneous backslash in path
                     try:

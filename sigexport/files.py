@@ -4,11 +4,13 @@ import hmac
 import shutil
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 from Crypto.Cipher import AES
-from typer import colors, secho
+from sqlcipher3 import dbapi2
+from typer import Exit, colors, secho
 
-from sigexport import models
+from sigexport import crypto, models
 from sigexport.logging import log
 
 CIPHER_KEY_SIZE = 32
@@ -72,12 +74,79 @@ def decrypt_attachment(att: dict[str, str], src_path: Path, dst_path: Path) -> N
         fp.write(data_decrypted)
 
 
+def get_attachments_from_db(
+    cursor: dbapi2.Cursor, message_id: str, edit_history_index: int = -1
+) -> list[dict]:
+    """Retrieve attachments from the message_attachments table
+    for DB version >= 1360
+    """
+    query = """
+    SELECT
+        size,
+        contentType,
+        path,
+        fileName,
+        localKey,
+        version,
+        pending
+    FROM message_attachments
+    WHERE
+        messageId = ?
+        AND editHistoryIndex = ?
+        AND attachmentType = 'attachment'
+    ORDER BY orderInMessage
+    """
+
+    cursor.execute(query, (message_id, edit_history_index))
+    attachments = []
+
+    for row in cursor:
+        att = {
+            "size": row[0],
+            "contentType": row[1],
+            "path": row[2],
+            "fileName": row[3],
+            "localKey": row[4],
+            "version": row[5] or 0,
+            "pending": row[6],
+        }
+        attachments.append(att)
+
+    return attachments
+
+
 def copy_attachments(
-    src: Path, dest: Path, convos: models.Convos, contacts: models.Contacts
+    src: Path,
+    dest: Path,
+    convos: models.Convos,
+    contacts: models.Contacts,
+    password: Optional[str],
+    key: Optional[str],
 ) -> None:
     """Copy attachments and reorganise in destination directory."""
     src_root = Path(src) / "attachments.noindex"
     dest = Path(dest)
+
+    db_file = src / "sql" / "db.sqlite"
+
+    if key is None:
+        try:
+            key = crypto.get_key(src, password)
+        except Exception as e:
+            secho(f"Failed to decrypt Signal password: {e}", fg=colors.RED)
+            raise Exit(1)
+
+    db = dbapi2.connect(str(db_file))
+    c = db.cursor()
+    # param binding doesn't work for pragmas, so use a direct string concat
+    c.execute(f"PRAGMA KEY = \"x'{key}'\"")
+    c.execute("PRAGMA cipher_page_size = 4096")
+    c.execute("PRAGMA kdf_iter = 64000")
+    c.execute("PRAGMA cipher_hmac_algorithm = HMAC_SHA512")
+    c.execute("PRAGMA cipher_kdf_algorithm = PBKDF2_HMAC_SHA512")
+    c.execute("PRAGMA user_version")
+    for row in c:
+        db_version = row[0]
 
     for key, messages in convos.items():
         name = contacts[key].name
@@ -88,6 +157,13 @@ def copy_attachments(
         dst_root = dest / name / "media"
         dst_root.mkdir(exist_ok=True, parents=True)
         for msg in messages:
+            if db and db_version and db_version >= 1360:
+                # Get attachments from database table
+                attachments = get_attachments_from_db(c, msg.id)
+                msg.attachments = attachments
+            elif not hasattr(msg, "attachments") or msg.attachments is None:
+                msg.attachments = []
+
             if msg.attachments:
                 attachments = msg.attachments
                 date = (

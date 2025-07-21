@@ -117,7 +117,7 @@ def main(
     contacts = utils.fix_names(contacts)
 
     secho("Copying and renaming attachments")
-    files.copy_attachments(source_dir, dest, convos, contacts)
+    files.copy_attachments(source_dir, dest, convos, contacts, password, key)
 
     if json_output and old:
         secho(

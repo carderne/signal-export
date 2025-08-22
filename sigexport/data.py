@@ -18,7 +18,7 @@ def fetch_data(
     chats: str,
     include_empty: bool,
     include_disappearing: bool,
-) -> tuple[models.Convos, models.Contacts, models.Contact]:
+) -> tuple[models.Convos, models.Contacts, Optional[models.Contact]]:
     """Load SQLite data into dicts.
     :returns: a tuple of:
         all conversations,
@@ -107,7 +107,9 @@ def fetch_data(
     if not include_empty:
         convos = {key: val for key, val in convos.items() if len(val) > 0}
 
-    owner_id = c.execute("select ourServiceId from sessions").fetchone()[0]
+    owner_row = c.execute("select ourServiceId from sessions").fetchone()
+    owner_id = owner_row[0] if owner_row is not None else None
     contact_by_service_id: models.Contacts = {c.serviceId: c for c in contacts.values()}
+    owner_contact = contact_by_service_id[owner_id] if owner_id else None
 
-    return convos, contacts, contact_by_service_id[owner_id]
+    return convos, contacts, owner_contact

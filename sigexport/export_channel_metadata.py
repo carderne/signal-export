@@ -13,13 +13,16 @@ from sigexport.models import Contact, Contacts
 def export_channel_metadata(
     dest: Path,
     contacts: Contacts,
-    owner: Contact,
+    owner: Optional[Contact],
     include_chats: Optional[list[str]] = None,
 ) -> None:
     """for each channel, write two files containing information about that group's membership:
     "meta.json": a JSON object with member information
     "members.csv": a flattened table of the info in meta.json, with one row per group member
     """
+
+    owner_name = owner.profile_name if owner else None
+    owner_service_id = owner.serviceId if owner else None
 
     contacts_by_serviceId = {c.serviceId: c for c in contacts.values()}
     all_groups = [g for g in contacts.values() if g.is_group]
@@ -33,7 +36,7 @@ def export_channel_metadata(
         members = [contacts_by_serviceId[m] for m in c.members] if c.members else []
         group_meta = {
             "name": c.name,
-            "exported_by": owner.profile_name,
+            "exported_by": owner_name,
             "exported_on": datetime.now().isoformat(),
             "members": [
                 {
@@ -48,7 +51,7 @@ def export_channel_metadata(
                         # but not if we're looking at the current group
                         if key != g.id
                         # redact the owner's group memberships
-                        and member.serviceId != owner.serviceId
+                        and member.serviceId != owner_service_id
                     ],
                 }
                 for member in members

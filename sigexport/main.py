@@ -45,6 +45,16 @@ def main(
         "--include-disappearing",
         help="Whether to include disappearing messages",
     ),
+    start_date: Optional[int] = Option(
+        None,
+        "--start",
+        help="Start date as Unix timestamp in milliseconds (e.g., 1751328000000)",
+    ),
+    end_date: Optional[int] = Option(
+        None,
+        "--end",
+        help="End date as Unix timestamp in milliseconds (e.g., 1754006399999)",
+    ),
     overwrite: bool = Option(
         False,
         "--overwrite/--no-overwrite",
@@ -68,6 +78,10 @@ def main(
     Example to export all to a directory:
 
         sigexport ~/outputdir
+
+    Example to export messages within a specific date range:
+
+        sigexport ~/outputdir --start 1751328000000 --end 1754006399999
     """
     logging.verbose = verbose
 
@@ -91,6 +105,8 @@ def main(
         chats=chats,
         include_empty=include_empty,
         include_disappearing=include_disappearing,
+        start_date=start_date,
+        end_date=end_date,
     )
 
     if list_chats:

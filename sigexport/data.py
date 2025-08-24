@@ -18,6 +18,8 @@ def fetch_data(
     chats: str,
     include_empty: bool,
     include_disappearing: bool,
+    start_date: Optional[int] = None,
+    end_date: Optional[int] = None,
 ) -> tuple[models.Convos, models.Contacts, Optional[models.Contact]]:
     """Load SQLite data into dicts.
     :returns: a tuple of:
@@ -72,7 +74,21 @@ def fetch_data(
         if not chats or (result[4] in chats_list or result[5] in chats_list):
             convos[cid] = []
 
-    query = "SELECT conversationId, type, json, id, body, sourceServiceId, timestamp, sent_at, serverTimestamp, hasAttachments, readStatus, seenStatus, expireTimer FROM messages ORDER BY sent_at"
+    query = "SELECT conversationId, type, json, id, body, sourceServiceId, timestamp, sent_at, serverTimestamp, hasAttachments, readStatus, seenStatus, expireTimer FROM messages"
+
+    # Add date range filtering to the query if provided
+    if start_date or end_date:
+        query += " WHERE "
+
+        if start_date:
+            query += f"sent_at >= {start_date}"
+        if start_date and end_date:
+            query += " AND "
+        if end_date:
+            query += f"sent_at <= {end_date}"
+
+    query += " ORDER BY sent_at"
+
     c.execute(query)
     for result in c:
         cid = result[0]
@@ -102,7 +118,13 @@ def fetch_data(
                 sticker=jsonLoaded.get("sticker"),
                 quote=jsonLoaded.get("quote"),
             )
-            convos[cid].append(con)
+
+            # Filter messages based on their timestamp
+            message_ts = con.get_ts()
+            if (start_date is None or message_ts >= start_date) and (
+                end_date is None or message_ts <= end_date
+            ):
+                convos[cid].append(con)
 
     if not include_empty:
         convos = {key: val for key, val in convos.items() if len(val) > 0}

@@ -27,15 +27,16 @@ def export_channel_metadata(
     contacts_by_serviceId = {c.serviceId: c for c in contacts.values()}
     all_groups = [g for g in contacts.values() if g.is_group]
     for key, c in contacts.items():
+        name = c.name or c.id
         if not c.is_group:
             continue
         if include_chats is not None and c.name not in include_chats:
             continue
         # ensure that the output folder for this channel exists
-        os.makedirs(dest / c.name, exist_ok=True)
+        os.makedirs(dest / name, exist_ok=True)
         members = [contacts_by_serviceId[m] for m in c.members] if c.members else []
         group_meta = {
-            "name": c.name,
+            "name": name,
             "exported_by": owner_name,
             "exported_on": datetime.now().isoformat(),
             "members": [
@@ -68,12 +69,13 @@ def export_channel_metadata(
             for m in group_meta["members"]
         ]
 
-        members_json_path = dest / c.name / "meta.json"
+        members_json_path = dest / name / "meta.json"
         with open(members_json_path, "w", encoding="utf-8") as members_json:
             json.dump(group_meta, members_json, ensure_ascii=False, indent=2)
 
-        members_csv_path = dest / c.name / "members.csv"
-        with open(members_csv_path, "w", encoding="utf-8") as members_csv:
-            writer = csv.DictWriter(members_csv, fieldnames=flat_meta[0].keys())
-            writer.writeheader()
-            writer.writerows(flat_meta)
+        members_csv_path = dest / name / "members.csv"
+        if len(flat_meta) > 0:
+            with open(members_csv_path, "w", encoding="utf-8") as members_csv:
+                writer = csv.DictWriter(members_csv, fieldnames=flat_meta[0].keys())
+                writer.writeheader()
+                writer.writerows(flat_meta)

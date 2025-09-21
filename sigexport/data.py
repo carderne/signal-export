@@ -1,6 +1,7 @@
 """Extract data from Signal DB."""
 
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -18,6 +19,8 @@ def fetch_data(
     chats: str,
     include_empty: bool,
     include_disappearing: bool,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
 ) -> tuple[models.Convos, models.Contacts, Optional[models.Contact]]:
     """Load SQLite data into dicts.
     :returns: a tuple of:
@@ -72,7 +75,42 @@ def fetch_data(
         if not chats or (result[4] in chats_list or result[5] in chats_list):
             convos[cid] = []
 
-    query = "SELECT conversationId, type, json, id, body, sourceServiceId, timestamp, sent_at, serverTimestamp, hasAttachments, readStatus, seenStatus, expireTimer FROM messages ORDER BY sent_at"
+    # Add date range filtering to the query if provided
+    where_clause = ""
+
+    if start_date or end_date:
+        where_clause += "WHERE "
+
+        if start_date:
+            start_ms = int(start_date.timestamp() * 1000)
+            where_clause += f"sent_at >= {start_ms}"
+
+        if start_date and end_date:
+            where_clause += " AND "
+
+        if end_date:
+            end_ms = int(end_date.timestamp() * 1000)
+            where_clause += f"sent_at <= {end_ms}"
+
+    query = f"""SELECT
+        conversationId,
+        type,
+        json,
+        id,
+        body,
+        sourceServiceId,
+        timestamp,
+        sent_at,
+        serverTimestamp,
+        hasAttachments,
+        readStatus,
+        seenStatus,
+        expireTimer
+    FROM messages
+    {where_clause}
+    ORDER BY sent_at
+    """  # noqa: S608
+
     c.execute(query)
     for result in c:
         cid = result[0]
@@ -102,6 +140,7 @@ def fetch_data(
                 sticker=jsonLoaded.get("sticker"),
                 quote=jsonLoaded.get("quote"),
             )
+
             convos[cid].append(con)
 
     if not include_empty:

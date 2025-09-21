@@ -1,6 +1,7 @@
 """Main script for sigexport."""
 
 import shutil
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -45,6 +46,16 @@ def main(
         "--include-disappearing",
         help="Whether to include disappearing messages",
     ),
+    start_date: Optional[str] = Option(
+        None,
+        "--start",
+        help="Start date as a ISO-8601 formatted string (e.g., 2025-01-15T12:30:00+02:00)",
+    ),
+    end_date: Optional[str] = Option(
+        None,
+        "--end",
+        help="End date as a ISO-8601 formatted string (e.g., 2025-03-15T12:30:00+02:00)",
+    ),
     overwrite: bool = Option(
         False,
         "--overwrite/--no-overwrite",
@@ -68,6 +79,10 @@ def main(
     Example to export all to a directory:
 
         sigexport ~/outputdir
+
+    Example to export messages within a specific date range:
+
+        sigexport ~/outputdir --start 2025-01-15T12:30:00+02:00 --end 2025-03-15T12:30:00+02:00
     """
     logging.verbose = verbose
 
@@ -84,6 +99,9 @@ def main(
         secho(f"Error: config.json not found in directory {source_dir}")
         raise Exit(code=1)
 
+    parsed_start_date = parse_input_dt(start_date) if start_date else None
+    parsed_end_date = parse_input_dt(end_date) if end_date else None
+
     convos, contacts, owner = data.fetch_data(
         source_dir,
         password=password,
@@ -91,6 +109,8 @@ def main(
         chats=chats,
         include_empty=include_empty,
         include_disappearing=include_disappearing,
+        start_date=parsed_start_date,
+        end_date=parsed_end_date,
     )
 
     if list_chats:
@@ -169,6 +189,25 @@ def main(
                 ht_f.close()
 
     secho("Done!", fg=colors.GREEN)
+
+
+def parse_input_dt(dt_string: str) -> datetime:
+    """Parses the ISO-formatted datetime string entered by the user"""
+    try:
+        dt = datetime.fromisoformat(dt_string)
+
+    except ValueError:
+        secho(
+            f"Invalid datetime, you entered '{dt_string}'. Must match ISO format, eg '2025-06-01' or '2025-08-10T12:15:00Z'",
+            fg=colors.RED,
+        )
+        raise
+
+    if dt.tzinfo is None:
+        local_tz = datetime.now().astimezone().tzinfo
+        dt = dt.replace(tzinfo=local_tz)
+
+    return dt
 
 
 def cli() -> None:

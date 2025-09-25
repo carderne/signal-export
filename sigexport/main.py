@@ -163,12 +163,15 @@ def main(
         # some contact names are None
         if not name:
             name = "None"
+
         md_path = dest / name / "chat.md"
         js_path = dest / name / "data.json"
         ht_path = dest / name / "index.html"
 
         md_f = md_path.open("a", encoding="utf-8")
-        js_f = js_path.open("a", encoding="utf-8")
+        js_f = None
+        if json_output:
+            js_f = js_path.open("a", encoding="utf-8")
         ht_f = None
         if html_output:
             ht_f = ht_path.open("w", encoding="utf-8")
@@ -176,15 +179,17 @@ def main(
         try:
             for msg in messages:
                 print(msg.to_md(), file=md_f)
-                print(msg.dict_str(), file=js_f)
-            if html_output:
+                if js_f:
+                    print(msg.dict_str(), file=js_f)
+            if ht_f:
                 ht = html.create_html(
                     name=name, messages=messages, msgs_per_page=paginate
                 )
                 print(ht, file=ht_f)
         finally:
             md_f.close()
-            js_f.close()
+            if js_f:
+                js_f.close()
             if ht_f:
                 ht_f.close()
 

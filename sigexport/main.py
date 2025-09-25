@@ -165,16 +165,15 @@ def main(
             name = "None"
 
         md_path = dest / name / "chat.md"
-        md_f = md_path.open("a", encoding="utf-8")
+        js_path = dest / name / "data.json"
+        ht_path = dest / name / "index.html"
 
+        md_f = md_path.open("a", encoding="utf-8")
         js_f = None
         if json_output:
-            js_path = dest / name / "data.json"
             js_f = js_path.open("a", encoding="utf-8")
-
         ht_f = None
         if html_output:
-            ht_path = dest / name / "index.html"
             ht_f = ht_path.open("w", encoding="utf-8")
 
         try:

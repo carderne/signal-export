@@ -174,8 +174,13 @@ def copy_attachments(
                 for i, att in enumerate(attachments):
                     # Account for no fileName key
                     file_name = str(att["fileName"]) if "fileName" in att else "None"
+                    # Limit file_name to 200 characters to account for 255-character file name limit on most platforms
+                    overlength = len(file_name) > 200
+                    if overlength:
+                        file_name = file_name[:200]
+
                     # Sometimes the key is there but it is None, needs extension
-                    if "." not in file_name:
+                    if "." not in file_name or overlength:
                         content_type = att.get("contentType", "").split("/")
                         if len(content_type) > 1:
                             ext = content_type[1]

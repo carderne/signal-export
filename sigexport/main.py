@@ -102,10 +102,15 @@ def main(
     parsed_start_date = parse_input_dt(start_date) if start_date else None
     parsed_end_date = parse_input_dt(end_date) if end_date else None
 
-    convos, contacts, owner = data.fetch_data(
+    cursor = utils.get_signal_database(
         source_dir,
         password=password,
         key=key,
+    )
+
+    convos, contacts, owner = data.fetch_data(
+        source_dir,
+        cursor,
         chats=chats,
         include_empty=include_empty,
         include_disappearing=include_disappearing,
@@ -137,7 +142,7 @@ def main(
     contacts = utils.fix_names(contacts)
 
     secho("Copying and renaming attachments")
-    files.copy_attachments(source_dir, dest, convos, contacts, password, key)
+    files.copy_attachments(source_dir, dest, convos, contacts, cursor)
 
     if json_output and old:
         secho(

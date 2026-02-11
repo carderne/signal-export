@@ -2,13 +2,16 @@ import sys
 from datetime import datetime
 from importlib.metadata import version
 from pathlib import Path
-from typing import Any, TypedDict, Union, cast
+from typing import Any, Optional, TypedDict, Union, cast
 
 import emoji
-from typer import Exit, secho
+from typer import Exit, colors, secho
 from typing_extensions import TypeGuard
 
-from sigexport import models
+from Crypto.Cipher import AES
+from sqlcipher3 import dbapi2
+
+from sigexport import crypto, models
 
 VERSION = version("signal-export")
 
@@ -107,3 +110,28 @@ def fix_names(contacts: models.Contacts) -> models.Contacts:
             fixed_contact_names.add(fixed_contact_name)
 
     return contacts
+
+def get_signal_database(
+    src: Path,
+    password: Optional[str],
+    key: Optional[str],
+) -> dbapi2.Cursor:
+    db_file = src / "sql" / "db.sqlite"
+
+    if key is None:
+        try:
+            key = crypto.get_key(src, password)
+        except Exception as e:
+            secho(f"Failed to decrypt Signal password: {e}", fg=colors.RED)
+            raise Exit(1)
+
+    db = dbapi2.connect(str(db_file))
+    c = db.cursor()
+    # param binding doesn't work for pragmas, so use a direct string concat
+    c.execute(f"PRAGMA KEY = \"x'{key}'\"")
+    c.execute("PRAGMA cipher_page_size = 4096")
+    c.execute("PRAGMA kdf_iter = 64000")
+    c.execute("PRAGMA cipher_hmac_algorithm = HMAC_SHA512")
+    c.execute("PRAGMA cipher_kdf_algorithm = PBKDF2_HMAC_SHA512")
+
+    return c

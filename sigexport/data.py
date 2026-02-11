@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from sqlcipher3 import dbapi2
-from typer import Exit, colors, secho
+from typer import Exit, secho
 
 from sigexport import crypto, models
 from sigexport.logging import log
@@ -14,8 +14,7 @@ from sigexport.logging import log
 
 def fetch_data(
     source_dir: Path,
-    password: Optional[str],
-    key: Optional[str],
+    c: dbapi2.Cursor,
     chats: str,
     include_empty: bool,
     include_disappearing: bool,
@@ -30,26 +29,10 @@ def fetch_data(
     """
     db_file = source_dir / "sql" / "db.sqlite"
 
-    if key is None:
-        try:
-            key = crypto.get_key(source_dir, password)
-        except Exception as e:
-            secho(f"Failed to decrypt Signal password: {e}", fg=colors.RED)
-            raise Exit(1)
-
     log(f"Fetching data from {db_file}\n")
     contacts: models.Contacts = {}
     convos: models.Convos = {}
     chats_list = chats.split(",") if len(chats) > 0 else []
-
-    db = dbapi2.connect(str(db_file))
-    c = db.cursor()
-    # param binding doesn't work for pragmas, so use a direct string concat
-    c.execute(f"PRAGMA KEY = \"x'{key}'\"")
-    c.execute("PRAGMA cipher_page_size = 4096")
-    c.execute("PRAGMA kdf_iter = 64000")
-    c.execute("PRAGMA cipher_hmac_algorithm = HMAC_SHA512")
-    c.execute("PRAGMA cipher_kdf_algorithm = PBKDF2_HMAC_SHA512")
 
     query = "SELECT type, id, serviceId, e164, name, profileName, members FROM conversations"
     c.execute(query)

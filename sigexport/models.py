@@ -73,6 +73,7 @@ def is_image(p: str) -> bool:
         "tiff",
         "webp",
         "apng",
+        "svg",
     ]
 
 
@@ -82,6 +83,10 @@ def is_audio(p: str) -> bool:
         "m4a",
         "aac",
         "mp3",
+        "ogg",
+        "opus",
+        "wav",
+        "flac",
     ]
 
 
@@ -91,6 +96,8 @@ def is_video(p: str) -> bool:
         "mp4",
         "mov",
         "mkv",
+        "mpeg",
+        "webm",
     ]
 
 

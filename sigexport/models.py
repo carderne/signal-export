@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from collections import namedtuple
 from dataclasses import asdict, dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 
@@ -55,6 +57,30 @@ class Contact:
     is_group: bool
     members: list[str] | None
 
+@dataclass
+class Sticker:
+    id: str
+    packId: str
+    packKey: str
+    emoji: str
+    extension: str | None = None
+
+    def get_path(self: Sticker, exportDest: Path = None) -> str | None:
+        if not exportDest:
+            if self.extension:
+                return "exported_stickers/" + self.packId + "/" + self.id + "." + self.extension
+            else:
+                return None
+
+        pack_path = Path(exportDest) / "exported_stickers" / self.packId
+        if not pack_path.is_dir():
+            return None
+
+        for file_name in os.listdir(pack_path):
+            if file_name.startswith(self.id + "."):
+                self.extension = file_name.split(".")[-1]
+                return "exported_stickers/" + self.packId + "/" + file_name
+        return None
 
 Contacts = dict[str, Contact]
 Convos = dict[str, list[RawMessage]]
@@ -71,6 +97,9 @@ def is_image(p: str) -> bool:
         "gif",
         "tif",
         "tiff",
+        "webp",
+        "apng",
+        "svg",
     ]
 
 
@@ -79,6 +108,11 @@ def is_audio(p: str) -> bool:
     return len(suffix) > 1 and suffix[-1] in [
         "m4a",
         "aac",
+        "mp3",
+        "ogg",
+        "opus",
+        "wav",
+        "flac",
     ]
 
 
@@ -86,6 +120,11 @@ def is_video(p: str) -> bool:
     suffix = p.split(".")
     return len(suffix) > 1 and suffix[-1] in [
         "mp4",
+        "mov",
+        "mkv",
+        "mpeg",
+        "webm",
+        "qt",
     ]
 
 
@@ -101,7 +140,7 @@ class Message:
     sender: str
     body: str
     quote: str
-    sticker: str
+    sticker: Sticker | None
     reactions: list[Reaction]
     attachments: list[Attachment]
 
@@ -113,8 +152,12 @@ class Message:
             reactions = [f"{r.name}: {r.emoji}" for r in self.reactions]
             body = body + "\n(- " + ", ".join(reactions) + " -)"
 
-        if len(self.sticker) > 0:
-            body = body + "\n(( " + self.sticker + " ))"
+        if self.sticker:
+            sticker_path = self.sticker.get_path()
+            if sticker_path:
+                body += f"[{self.sticker.emoji}](../{sticker_path})  "
+            else:
+                body = body + "\n(( " + self.sticker.emoji + " ))"
 
         for att in self.attachments:
             if is_image(att.path):

@@ -63,12 +63,15 @@ def create_message(
                     f"\t\tReaction fromId not found in contacts: [{date}] {sender}: {r}"
                 )
 
-    sticker = ""
+    sticker = None
     if msg.sticker:
-        try:
-            sticker = msg.sticker["data"]["emoji"]
-        except KeyError:
-            pass
+        sticker = models.Sticker(
+            str(msg.sticker["stickerId"]),
+            msg.sticker["packId"],
+            msg.sticker["packKey"],
+            msg.sticker["emoji"],
+            msg.sticker["extension"],
+        )
 
     quote = ""
     if msg.quote:

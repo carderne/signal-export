@@ -18,6 +18,8 @@ coverage==7.4.4
     # via pytest-cov
 emoji==2.10.1
     # via signal-export
+filetype==1.2.0
+    # via signal-export
 iniconfig==2.0.0
     # via pytest
 markdown==3.6

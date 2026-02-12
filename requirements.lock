@@ -16,6 +16,8 @@ click==8.1.7
     # via typer
 emoji==2.10.1
     # via signal-export
+filetype==1.2.0
+    # via signal-export
 markdown==3.6
     # via signal-export
 markdown-it-py==3.0.0

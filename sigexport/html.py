@@ -5,9 +5,9 @@ from pathlib import Path
 
 import markdown
 from bs4 import BeautifulSoup
-from typer import secho
+from typer import colors, secho
 
-from sigexport import models, templates
+from sigexport import models, templates, files
 from sigexport.logging import log
 
 
@@ -90,6 +90,19 @@ def create_html(
                 temp = templates.video.format(src=src)
             else:
                 temp = None
+            if temp:
+                soup.append(BeautifulSoup(temp, "html.parser"))
+
+        # sticker
+        if msg.sticker:
+            sticker_path = msg.sticker.get_path()
+
+            if sticker_path:
+                src = f"../{sticker_path}"
+                temp = templates.figure.format(src=src, alt=msg.sticker.emoji)
+            else:
+                temp = "(( " + msg.sticker.emoji + " ))"
+
             if temp:
                 soup.append(BeautifulSoup(temp, "html.parser"))
 

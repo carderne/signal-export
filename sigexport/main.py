@@ -67,6 +67,11 @@ def main(
         "--chat-members",
         help="Export membership information for all chats (or for a subset of chats given by the --chats option)",
     ),
+    no_attachments: bool = Option(
+        False,
+        "--no-attachments",
+        help="Skip copying attachments",
+    ),
     _: bool = Option(False, "--version", callback=utils.version_callback),
 ) -> None:
     """
@@ -136,8 +141,9 @@ def main(
 
     contacts = utils.fix_names(contacts)
 
-    secho("Copying and renaming attachments")
-    files.copy_attachments(source_dir, dest, convos, contacts, password, key)
+    if not no_attachments:
+        secho("Copying and renaming attachments")
+        files.copy_attachments(source_dir, dest, convos, contacts, password, key)
 
     if json_output and old:
         secho(

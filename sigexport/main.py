@@ -170,6 +170,7 @@ def main(
         if not name:
             name = "None"
 
+        (dest / name).mkdir(parents=True, exist_ok=True)
         md_path = dest / name / "chat.md"
         js_path = dest / name / "data.json"
         ht_path = dest / name / "index.html"

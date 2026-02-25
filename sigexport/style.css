@@ -87,6 +87,7 @@ div {
     display: block;
     margin-left: 3em;
     word-wrap: break-word;
+    white-space: pre-wrap;
 }
 
 figure > label > img, video {
@@ -145,4 +146,5 @@ label > img {
     background-color: #f7f6ff;
     width: 50%;
     padding: 1rem;
+    white-space: pre-wrap;
 }

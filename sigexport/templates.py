@@ -21,14 +21,18 @@ html = """
 </html>
 """
 
+quote = """
+    <p class=quote>{quote}</p>
+"""
+
 message = """
 <div class='{cl}'>
     <span class=date>{date}</span>
     <span class=time>{time}</span>
     <span class=sender>{sender}</span>
     {quote}
-    <span class=body>{body}</span>
-    <span class=reaction>{reactions}</span>
+    <p class=body>{body}</p>
+    <p class=reaction>{reactions}</p>
 </div>
 """
 

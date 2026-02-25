@@ -1,9 +1,9 @@
+import html
 import os
 import re
 import shutil
 from pathlib import Path
 
-import markdown
 from bs4 import BeautifulSoup
 from typer import secho
 
@@ -64,18 +64,14 @@ def create_html(
         reactions = " ".join(f"{r.name}: {r.emoji}" for r in msg.reactions)
         quote = ""
         if msg.quote:
-            quote = f"<div class=quote>{msg.quote.replace('>', '')}</div>"
+            quote = templates.quote.format(quote=html.escape(msg.quote))
 
         body = msg.body
-        try:
-            body = markdown.Markdown().convert(body)
-        except RecursionError:
-            log(f"Maximum recursion on message {body}, not converted")
 
         # links
         p = re.compile(r"(https{0,1}://\S*)")
         a_template = r"<a href='\1' target='_blank'>\1</a> "
-        body = re.sub(p, a_template, body)
+        body = re.sub(p, a_template, html.escape(body))
 
         soup = BeautifulSoup(body, "html.parser")
         # attachments
@@ -96,12 +92,12 @@ def create_html(
         cl = "msg me" if sender == "Me" else "msg"
         ht_content += templates.message.format(
             cl=cl,
-            date=date,
-            time=time,
-            sender=sender,
+            date=html.escape(date),
+            time=html.escape(time),
+            sender=html.escape(sender),
             quote=quote,
             body=soup,
-            reactions=reactions,
+            reactions=html.escape(reactions),
         )
     ht_text = templates.html.format(
         name=name,

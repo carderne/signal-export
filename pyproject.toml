@@ -1,18 +1,9 @@
-[tool.rye.scripts]
-sig = "sigexport"
-
-fmt = "rye fmt"
-lint = "rye lint --fix"
-check = "pyright"
-test = "pytest"
-all = { chain = ["fmt", "lint", "check", "test"] }
-
 [project]
 name = "signal-export"
 description = "Export Signal conversations to Markdown and HTML"
 readme = "README.md"
 license = {text = "MIT License"}
-requires-python = ">= 3.9"
+requires-python = ">=3.9"
 keywords = ["backup", "chat", "export"]
 
 authors = [
@@ -29,18 +20,17 @@ classifiers = [
 ]
 
 dependencies = [
-    "beautifulsoup4 ~= 4.11",
-    "emoji ~= 2.0",
-    "Markdown ~= 3.4",
-    "typer >= 0.12.1",
-    "pycryptodome ~= 3.20",
-    "sqlcipher3-wheels >= 0.5.4",
+    "beautifulsoup4~=4.11",
+    "emoji~=2.0",
+    "Markdown~=3.4",
+    "typer>=0.12.1",
+    "pycryptodome~=3.20",
+    "sqlcipher3-wheels>=0.5.4",
 ]
 
-[tool.rye]
-managed = true
-generate-hashes = false
-dev-dependencies = [
+[dependency-groups]
+dev = [
+    "poethepoet",
     "pyright",
     "pytest",
     "pytest-cov",
@@ -64,6 +54,19 @@ includes = ["sigexport/"]
 
 [tool.pdm.version]
 source = "scm"
+
+[tool.poe.tasks]
+fmt = "ruff format"
+lint = "ruff check --fix"
+check = "pyright"
+test = "pytest"
+
+all = [
+  { ref = "fmt" },
+  { ref = "lint" },
+  { ref = "check" },
+  { ref = "test" },
+]
 
 [tool.ruff]
 target-version = "py39"

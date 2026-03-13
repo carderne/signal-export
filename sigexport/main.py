@@ -122,7 +122,9 @@ def main(
         raise Exit()
 
     if channel_members_only:
-        export_channel_metadata(dest, contacts, owner, chats.split(",") if chats else None)
+        export_channel_metadata(
+            dest, contacts, owner, chats.split(",") if chats else None
+        )
         raise Exit()
 
     dest = Path(dest).expanduser()

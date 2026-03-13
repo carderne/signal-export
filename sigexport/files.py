@@ -145,6 +145,8 @@ def copy_attachments(
     c.execute("PRAGMA cipher_hmac_algorithm = HMAC_SHA512")
     c.execute("PRAGMA cipher_kdf_algorithm = PBKDF2_HMAC_SHA512")
     c.execute("PRAGMA user_version")
+
+    db_version = None
     for row in c:
         db_version = row[0]
 

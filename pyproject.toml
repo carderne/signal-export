@@ -1,3 +1,16 @@
+[tool.poe.tasks]
+fmt = "ruff format"
+lint = "ruff check --fix"
+check = "pyright"
+test = "pytest"
+
+all = [
+  { ref = "fmt" },
+  { ref = "lint" },
+  { ref = "check" },
+  { ref = "test" },
+]
+
 [project]
 name = "signal-export"
 description = "Export Signal conversations to Markdown and HTML"
@@ -15,7 +28,6 @@ dynamic = ["version"]
 classifiers = [
   "Environment :: Console",
   "License :: OSI Approved :: MIT License",
-  "Operating System :: Unix",
   "Programming Language :: Python",
 ]
 
@@ -31,6 +43,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "poethepoet",
+    "ruff",
     "pyright",
     "pytest",
     "pytest-cov",
@@ -54,19 +67,6 @@ includes = ["sigexport/"]
 
 [tool.pdm.version]
 source = "scm"
-
-[tool.poe.tasks]
-fmt = "ruff format"
-lint = "ruff check --fix"
-check = "pyright"
-test = "pytest"
-
-all = [
-  { ref = "fmt" },
-  { ref = "lint" },
-  { ref = "check" },
-  { ref = "test" },
-]
 
 [tool.ruff]
 target-version = "py39"

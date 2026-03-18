@@ -75,6 +75,13 @@ def fetch_data(
         if not chats or (result[4] in chats_list or result[5] in chats_list):
             convos[cid] = []
 
+    # Check which columns exist (older DB schemas may be missing some)
+    c.execute("PRAGMA table_info(messages)")
+    msg_cols = {row[1] for row in c.fetchall()}
+
+    def col(name: str) -> str:
+        return name if name in msg_cols else f"NULL AS {name}"
+
     # Add date range filtering to the query if provided
     where_clause = ""
 
@@ -98,14 +105,14 @@ def fetch_data(
         json,
         id,
         body,
-        sourceServiceId,
-        timestamp,
+        {col("sourceServiceId")},
+        {col("timestamp")},
         sent_at,
-        serverTimestamp,
-        hasAttachments,
-        readStatus,
-        seenStatus,
-        expireTimer
+        {col("serverTimestamp")},
+        {col("hasAttachments")},
+        {col("readStatus")},
+        {col("seenStatus")},
+        {col("expireTimer")}
     FROM messages
     {where_clause}
     ORDER BY sent_at

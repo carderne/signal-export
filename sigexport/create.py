@@ -1,8 +1,59 @@
 import re
 from pathlib import Path
+from typing import Any
 
 from sigexport import models, utils
 from sigexport.logging import log
+
+
+def _format_call(call_history: dict[str, Any] | None) -> str:
+    """Format a human-readable call description from call_history data."""
+    if not call_history:
+        return "Outgoing call"
+
+    # Legacy format (older Signal versions)
+    if "wasIncoming" in call_history and "direction" not in call_history:
+        return "Incoming call" if call_history["wasIncoming"] else "Outgoing call"
+
+    direction = call_history.get("direction", "")
+    status = call_history.get("status", "")
+    call_type = (call_history.get("callType") or "").lower()  # "audio" or "video"
+    started_ts = call_history.get("timestamp")
+    ended_ts = call_history.get("endedTimestamp")
+
+    # Duration string (only if call was accepted and we have both timestamps)
+    duration_str = ""
+    if status == "Accepted" and started_ts and ended_ts and ended_ts > started_ts:
+        total_secs = (ended_ts - started_ts) // 1000
+        mins, secs = divmod(total_secs, 60)
+        duration_str = f"{mins}m {secs}s" if mins else f"{secs}s"
+
+    label = f"{call_type} call" if call_type else "call"
+    label = label.replace("audio", "voice")
+
+    if direction == "Incoming":
+        if status == "Accepted":
+            detail = f"accepted, {duration_str}" if duration_str else "accepted"
+            return f"Incoming {label} ({detail})"
+        elif status == "Missed":
+            return f"Missed {label}"
+        elif status == "Declined":
+            return f"Incoming {label} (declined)"
+        else:
+            return f"Incoming {label} ({status.lower()})" if status else f"Incoming {label}"
+    elif direction == "Outgoing":
+        if status == "Accepted":
+            detail = f"accepted, {duration_str}" if duration_str else "accepted"
+            return f"Outgoing {label} ({detail})"
+        elif status in ("Missed", "NotAccepted"):
+            return f"Outgoing {label} (unanswered)"
+        elif status == "Declined":
+            return f"Outgoing {label} (declined by recipient)"
+        else:
+            return f"Outgoing {label} ({status.lower()})" if status else f"Outgoing {label}"
+    else:
+        # Fallback
+        return "Incoming call" if call_history.get("wasIncoming") else "Outgoing call"
 
 
 def create_message(
@@ -18,11 +69,7 @@ def create_message(
     log(f"\t\tDoing {name}, msg: {date}")
 
     if msg.type == "call-history":
-        body = (
-            "Incoming call"
-            if msg.call_history and msg.call_history["wasIncoming"]
-            else "Outgoing call"
-        )
+        body = _format_call(msg.call_history)
     else:
         body = msg.body or ""
 
@@ -31,6 +78,8 @@ def create_message(
 
     sender = "No-Sender"
     if msg.type == "outgoing":
+        sender = "Me"
+    elif msg.type == "call-history" and msg.call_history and msg.call_history.get("direction") == "Outgoing":
         sender = "Me"
     else:
         try:

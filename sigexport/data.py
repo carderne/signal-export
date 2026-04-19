@@ -12,6 +12,21 @@ from sigexport import crypto, models
 from sigexport.logging import log
 
 
+def _call_history(
+    jsonLoaded: dict, call_directions: dict[str, dict]
+) -> dict | None:
+    """Build a call_history dict from the callsHistory table or legacy JSON fields."""
+    # Try legacy JSON keys first (older Signal versions)
+    result = jsonLoaded.get("call_history") or jsonLoaded.get("callHistoryDetails")
+    if result:
+        return result
+    # Modern Signal: direction is in a separate callsHistory table
+    call_id = jsonLoaded.get("callId")
+    if call_id and call_id in call_directions:
+        return call_directions[call_id]
+    return None
+
+
 def fetch_data(
     source_dir: Path,
     password: Optional[str],
@@ -50,6 +65,22 @@ def fetch_data(
     c.execute("PRAGMA kdf_iter = 64000")
     c.execute("PRAGMA cipher_hmac_algorithm = HMAC_SHA512")
     c.execute("PRAGMA cipher_kdf_algorithm = PBKDF2_HMAC_SHA512")
+
+    # Load call info from callsHistory table (keyed by callId)
+    call_directions: dict[str, dict] = {}
+    try:
+        c2 = db.cursor()
+        c2.execute("SELECT callId, direction, status, type, timestamp, endedTimestamp FROM callsHistory")
+        for row in c2.fetchall():
+            call_directions[row[0]] = {
+                "direction": row[1],
+                "status": row[2],
+                "callType": row[3],
+                "timestamp": row[4],
+                "endedTimestamp": row[5],
+            }
+    except Exception:
+        pass
 
     query = "SELECT type, id, serviceId, e164, name, profileName, members FROM conversations"
     c.execute(query)
@@ -142,7 +173,7 @@ def fetch_data(
                 attachments=jsonLoaded.get("attachments", []),
                 read_status=result[10],
                 seen_status=result[11],
-                call_history=jsonLoaded.get("call_history"),
+                call_history=_call_history(jsonLoaded, call_directions),
                 reactions=jsonLoaded.get("reactions", []),
                 sticker=jsonLoaded.get("sticker"),
                 quote=jsonLoaded.get("quote"),

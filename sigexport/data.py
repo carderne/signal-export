@@ -12,6 +12,56 @@ from sigexport import crypto, models
 from sigexport.logging import log
 
 
+def _call_history(
+    jsonLoaded: dict, call_directions: dict[str, dict]
+) -> dict | None:
+    """Build a call_history dict by combining legacy JSON and callsHistory data."""
+    legacy = jsonLoaded.get("call_history") or jsonLoaded.get("callHistoryDetails")
+    call_row = None
+
+    call_id = jsonLoaded.get("callId")
+    if call_id is not None:
+        call_row = call_directions.get(str(call_id))
+
+    # Merge when both are available so modern direction/status from callsHistory wins
+    if isinstance(legacy, dict) and isinstance(call_row, dict):
+        return {**legacy, **call_row}
+    if isinstance(call_row, dict):
+        return call_row
+    if isinstance(legacy, dict):
+        return legacy
+
+    return None
+
+
+def _load_call_directions(db: dbapi2.Connection) -> dict[str, dict]:
+    """Load call info from callsHistory table (if present in this Signal schema)."""
+    call_directions: dict[str, dict] = {}
+    try:
+        c2 = db.cursor()
+        c2.execute("SELECT callId, direction, status, type, timestamp, endedTimestamp FROM callsHistory")
+        for row in c2.fetchall():
+            call_directions[str(row[0])] = {
+                "direction": row[1],
+                "status": row[2],
+                "callType": row[3],
+                "timestamp": row[4],
+                "endedTimestamp": row[5],
+            }
+    except dbapi2.OperationalError as e:
+        err = str(e).lower()
+        if "no such table" in err and "callshistory" in err:
+            log("\tcallsHistory table not found; using legacy call metadata only")
+        else:
+            secho(f"Failed to query callsHistory table: {e}", fg=colors.RED)
+            raise Exit(1) from e
+    except Exception as e:
+        secho(f"Unexpected error while querying callsHistory table: {e}", fg=colors.RED)
+        raise Exit(1) from e
+
+    return call_directions
+
+
 def fetch_data(
     source_dir: Path,
     password: Optional[str],
@@ -50,6 +100,8 @@ def fetch_data(
     c.execute("PRAGMA kdf_iter = 64000")
     c.execute("PRAGMA cipher_hmac_algorithm = HMAC_SHA512")
     c.execute("PRAGMA cipher_kdf_algorithm = PBKDF2_HMAC_SHA512")
+
+    call_directions = _load_call_directions(db)
 
     query = "SELECT type, id, serviceId, e164, name, profileName, members FROM conversations"
     c.execute(query)
@@ -142,7 +194,7 @@ def fetch_data(
                 attachments=jsonLoaded.get("attachments", []),
                 read_status=result[10],
                 seen_status=result[11],
-                call_history=jsonLoaded.get("call_history"),
+                call_history=_call_history(jsonLoaded, call_directions),
                 reactions=jsonLoaded.get("reactions", []),
                 sticker=jsonLoaded.get("sticker"),
                 quote=jsonLoaded.get("quote"),

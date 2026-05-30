@@ -40,7 +40,11 @@ def _format_call(call_history: dict[str, Any] | None) -> str:
         elif status == "Declined":
             return f"Incoming {label} (declined)"
         else:
-            return f"Incoming {label} ({status.lower()})" if status else f"Incoming {label}"
+            return (
+                f"Incoming {label} ({status.lower()})"
+                if status
+                else f"Incoming {label}"
+            )
     elif direction == "Outgoing":
         if status == "Accepted":
             detail = f"accepted, {duration_str}" if duration_str else "accepted"
@@ -50,7 +54,11 @@ def _format_call(call_history: dict[str, Any] | None) -> str:
         elif status == "Declined":
             return f"Outgoing {label} (declined by recipient)"
         else:
-            return f"Outgoing {label} ({status.lower()})" if status else f"Outgoing {label}"
+            return (
+                f"Outgoing {label} ({status.lower()})"
+                if status
+                else f"Outgoing {label}"
+            )
     else:
         # Fallback
         return "Incoming call" if call_history.get("wasIncoming") else "Outgoing call"
@@ -79,7 +87,11 @@ def create_message(
     sender = "No-Sender"
     if msg.type == "outgoing":
         sender = "Me"
-    elif msg.type == "call-history" and msg.call_history and msg.call_history.get("direction") == "Outgoing":
+    elif (
+        msg.type == "call-history"
+        and msg.call_history
+        and msg.call_history.get("direction") == "Outgoing"
+    ):
         sender = "Me"
     else:
         try:

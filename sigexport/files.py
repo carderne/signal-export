@@ -1,6 +1,8 @@
 import base64
+import filetype
 import hashlib
 import hmac
+import json
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -18,12 +20,18 @@ MAC_KEY_SIZE = 32
 MAC_SIZE = hashlib.sha256().digest_size
 
 
-def decrypt_attachment(att: dict[str, str], src_path: Path, dst_path: Path) -> None:
+def decrypt_attachment(att: dict[str, str], src_path: Path, dst_path: Path, detect_file_type: bool = False) -> None:
     """Decrypt attachment and save to `dst_path`.
 
     Code adapted from:
         https://github.com/tbvdm/sigtop
     """
+    try:
+        with open(src_path, "rb") as fp:
+            data = fp.read()
+    except Exception as e:
+        raise ValueError(f"Failed to read file: {str(e)}")
+
     try:
         keys = base64.b64decode(att["localKey"])
     except KeyError:
@@ -36,12 +44,6 @@ def decrypt_attachment(att: dict[str, str], src_path: Path, dst_path: Path) -> N
 
     cipher_key = keys[:CIPHER_KEY_SIZE]
     mac_key = keys[CIPHER_KEY_SIZE:]
-
-    try:
-        with open(src_path, "rb") as fp:
-            data = fp.read()
-    except Exception as e:
-        raise ValueError(f"Failed to read file: {str(e)}")
 
     if len(data) < IV_SIZE + MAC_SIZE:
         raise ValueError("Attachment data too short")
@@ -67,6 +69,15 @@ def decrypt_attachment(att: dict[str, str], src_path: Path, dst_path: Path) -> N
 
     if len(decrypted_data) < int(att["size"]):
         raise ValueError("Invalid attachment data length")
+
+    if detect_file_type:
+        dst_path = str(dst_path)
+        try:
+            ext = filetype.guess_extension(decrypted_data)
+        except TypeError:
+            raise ValueError("Unsupported attachment file type")
+
+        dst_path += "." + ext
 
     data_decrypted = decrypted_data[: att["size"]]
     with open(dst_path, "wb") as fp:
@@ -220,3 +231,122 @@ def merge_attachments(media_new: Path, media_old: Path) -> None:
                     f"Skipped file {f} as duplicate found in new export directory!",
                     fg=colors.RED,
                 )
+
+
+def copy_stickers(
+    cursor: dbapi2.Cursor,
+    src: Path,
+    dest: Path,
+) -> None:
+    src_root = Path(src) / "stickers.noindex"
+    dst_root = Path(dest) / "exported_stickers"
+    dst_root.mkdir(exist_ok=True, parents=True)
+
+    query = """
+    SELECT * FROM sticker_packs;
+    """
+
+    cursor.execute(query)
+    sticker_packs = {}
+
+    for row in cursor:
+        sticker_packs[row[0]] = {
+            "id": row[0],
+            "key": row[1],
+            "author": row[2],
+            "coverStickerId": row[3],
+            "createdAt": row[4],
+            "downloadAttempts": row[5],
+            "installedAt": row[6],
+            "lastUsed": row[7],
+            "status": row[8],
+            "stickerCount": row[9],
+            "title": row[10],
+            "attemptedStatus": row[11],
+            "position": row[12],
+            "storageID": row[13],
+            "storageVersion": row[14],
+            "storageUnknownFields": row[15],
+            "storageNeedsSync": row[16],
+            "stickers": [],
+        }
+
+    for pack_id in sticker_packs:
+        query = """
+        SELECT
+            *
+        FROM stickers
+        WHERE
+            packId=?
+        ORDER BY id
+        """
+
+        cursor.execute(query, (pack_id,))
+
+        pck_path = dst_root / pack_id
+        pck_path.mkdir(exist_ok=True, parents=True)
+
+        for row in cursor:
+            sticker = {
+                "id": row[0],
+                "packId": row[1],
+                "emoji": row[2],
+                "height": row[3],
+                "isCoverOnly": row[4],
+                "lastUsed": row[5],
+                "path": row[6],
+                "width": row[7],
+                "version": row[8],
+                "localKey": row[9],
+                "size": row[10],
+            }
+
+            try:
+                sticker_path = str(sticker["path"]).replace("\\", "/")
+            except KeyError:
+                log(f"\t\tBroken sticker:\t{sticker}")
+                continue
+
+            src_path = src_root / sticker_path
+            dst_path = pck_path / str(sticker["id"])
+            decrypt_attachment(sticker, src_path, dst_path, True)
+
+            sticker_packs[pack_id]["stickers"].append(sticker)
+        js_path = pck_path / "data.json"
+        js_f = js_path.open("a", encoding="utf-8")
+        js_str = json.dumps(sticker_packs[pack_id])
+        if js_f:
+            print(js_str, file=js_f)
+
+
+def check_stickers_existence(
+    convos: models.Convos,
+    contacts: models.Contacts,
+    dest: Path,
+) -> None:
+    for key, messages in convos.items():
+        name = contacts[key].name
+        # some contact names are None
+        if not name:
+            name = "None"
+
+        for msg in messages:
+            if msg.sticker:
+                m_sticker = models.Sticker(
+                    str(msg.sticker["stickerId"]),
+                    msg.sticker["packId"],
+                    msg.sticker["packKey"],
+                    msg.sticker["emoji"],
+                )
+                if m_sticker.get_path(dest):
+                    msg.sticker["extension"] = m_sticker.extension
+                else:
+                    date = (
+                        datetime.fromtimestamp(msg.get_ts() / 1000)
+                        .isoformat(timespec="milliseconds")
+                    )
+                    secho(
+                        f"Not found: sticker {m_sticker.id} from pack '{m_sticker.packId}' used in conversation '{name}' at {date}, skipping",
+                        fg=colors.MAGENTA,
+                    )
+                    msg.sticker["extension"] = "unknown"

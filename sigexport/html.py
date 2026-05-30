@@ -93,6 +93,19 @@ def create_html(
             if temp:
                 soup.append(BeautifulSoup(temp, "html.parser"))
 
+        # sticker
+        if msg.sticker:
+            sticker_path = msg.sticker.get_path()
+
+            if sticker_path:
+                src = f"../{sticker_path}"
+                temp = templates.figure.format(src=src, alt=msg.sticker.emoji)
+            else:
+                temp = "(( " + msg.sticker.emoji + " ))"
+
+            if temp:
+                soup.append(BeautifulSoup(temp, "html.parser"))
+
         cl = "msg me" if sender == "Me" else "msg"
         ht_content += templates.message.format(
             cl=cl,

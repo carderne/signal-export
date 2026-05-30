@@ -29,6 +29,9 @@ def main(
     chats: str = Option(
         "", help="Comma-separated chat names to include: contact names or group names"
     ),
+    stickers: bool = Option(
+        True, "--stickers/--no-stickers", "-s", help="Whether to export stickers"
+    ),
     json_output: bool = Option(
         True, "--json/--no-json", "-j", help="Whether to create JSON output"
     ),
@@ -145,6 +148,11 @@ def main(
         raise Exit()
 
     contacts = utils.fix_names(contacts)
+
+    if stickers:
+        secho("Exporting stickers")
+        files.copy_stickers(cursor, source_dir, dest)
+        files.check_stickers_existence(convos, contacts, dest)
 
     if attachments:
         secho("Copying and renaming attachments")

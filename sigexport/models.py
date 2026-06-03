@@ -99,6 +99,9 @@ def is_image(p: str) -> bool:
         "gif",
         "tif",
         "tiff",
+        "webp",
+        "apng",
+        "svg",
     ]
 
 
@@ -107,6 +110,11 @@ def is_audio(p: str) -> bool:
     return len(suffix) > 1 and suffix[-1] in [
         "m4a",
         "aac",
+        "mp3",
+        "ogg",
+        "opus",
+        "wav",
+        "flac",
     ]
 
 
@@ -114,6 +122,11 @@ def is_video(p: str) -> bool:
     suffix = p.split(".")
     return len(suffix) > 1 and suffix[-1] in [
         "mp4",
+        "mov",
+        "mkv",
+        "mpeg",
+        "webm",
+        "qt",
     ]
 
 

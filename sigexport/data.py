@@ -3,24 +3,20 @@
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from sqlcipher3 import dbapi2
 from typer import Exit, colors, secho
-
-from Crypto.Cipher import AES
-from sqlcipher3 import dbapi2
 
 from sigexport import crypto, models
 from sigexport.logging import log
 
 
-def _call_history(jsonLoaded: dict, call_directions: dict[str, dict]) -> dict | None:
+def _call_history(json_loaded: dict, call_directions: dict[str, dict]) -> dict | None:
     """Build a call_history dict by combining legacy JSON and callsHistory data."""
-    legacy = jsonLoaded.get("call_history") or jsonLoaded.get("callHistoryDetails")
+    legacy = json_loaded.get("call_history") or json_loaded.get("callHistoryDetails")
     call_row = None
 
-    call_id = jsonLoaded.get("callId")
+    call_id = json_loaded.get("callId")
     if call_id is not None:
         call_row = call_directions.get(str(call_id))
 
@@ -70,9 +66,9 @@ def fetch_data(
     chats: str,
     include_empty: bool,
     include_disappearing: bool,
-    start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None,
-) -> tuple[models.Convos, models.Contacts, Optional[models.Contact]]:
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+) -> tuple[models.Convos, models.Contacts, models.Contact | None]:
     """Load SQLite data into dicts.
     :returns: a tuple of:
         all conversations,
@@ -200,8 +196,8 @@ def fetch_data(
 
 def get_signal_database(
     src: Path,
-    password: Optional[str],
-    key: Optional[str],
+    password: str | None,
+    key: str | None,
 ) -> dbapi2.Cursor:
     db_file = src / "sql" / "db.sqlite"
 

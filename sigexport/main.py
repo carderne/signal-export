@@ -3,15 +3,14 @@
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from typer import Argument, Context, Exit, Option, colors, run, secho
 
 from sigexport import create, data, files, html, logging, merge, utils
 from sigexport.export_channel_metadata import export_channel_metadata
 
-OptionalPath = Optional[Path]
-OptionalStr = Optional[str]
+OptionalPath = Path | None
+OptionalStr = str | None
 
 
 def main(
@@ -49,12 +48,12 @@ def main(
         "--include-disappearing",
         help="Whether to include disappearing messages",
     ),
-    start_date: Optional[str] = Option(
+    start_date: str | None = Option(
         None,
         "--start",
         help="Start date as a ISO-8601 formatted string (e.g., 2025-01-15T12:30:00+02:00)",
     ),
-    end_date: Optional[str] = Option(
+    end_date: str | None = Option(
         None,
         "--end",
         help="End date as a ISO-8601 formatted string (e.g., 2025-03-15T12:30:00+02:00)",

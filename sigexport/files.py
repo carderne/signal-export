@@ -1,5 +1,4 @@
 import base64
-import filetype
 import hashlib
 import hmac
 import json
@@ -7,6 +6,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
+import filetype
 from Crypto.Cipher import AES
 from sqlcipher3 import dbapi2
 from typer import colors, secho
@@ -20,7 +20,9 @@ MAC_KEY_SIZE = 32
 MAC_SIZE = hashlib.sha256().digest_size
 
 
-def decrypt_attachment(att: dict[str, str], src_path: Path, dst_path: Path, detect_file_type: bool = False) -> None:
+def decrypt_attachment(
+    att: dict[str, str], src_path: Path, dst_path: Path, detect_file_type: bool = False
+) -> None:
     """Decrypt attachment and save to `dst_path`.
 
     Code adapted from:
@@ -71,16 +73,16 @@ def decrypt_attachment(att: dict[str, str], src_path: Path, dst_path: Path, dete
         raise ValueError("Invalid attachment data length")
 
     if detect_file_type:
-        dst_path = str(dst_path)
+        dst_path_str = str(dst_path)
         try:
             ext = filetype.guess_extension(decrypted_data)
         except TypeError:
             raise ValueError("Unsupported attachment file type")
 
-        dst_path += "." + ext
+        dst_path_str += "." + ext
 
-    data_decrypted = decrypted_data[: att["size"]]
-    with open(dst_path, "wb") as fp:
+    data_decrypted = decrypted_data[: int(att["size"])]
+    with open(dst_path_str, "wb") as fp:
         fp.write(data_decrypted)
 
 
@@ -346,9 +348,8 @@ def check_stickers_existence(
                 if m_sticker.get_path(dest):
                     msg.sticker["extension"] = m_sticker.extension
                 else:
-                    date = (
-                        datetime.fromtimestamp(msg.get_ts() / 1000)
-                        .isoformat(timespec="milliseconds")
+                    date = datetime.fromtimestamp(msg.get_ts() / 1000).isoformat(
+                        timespec="milliseconds"
                     )
                     secho(
                         f"Not found: sticker {m_sticker.id} from pack '{m_sticker.packId}' used in conversation '{name}' at {date}, skipping",

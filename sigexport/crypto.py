@@ -5,7 +5,6 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
 
 if sys.platform == "win32":
     from base64 import b64decode
@@ -39,7 +38,7 @@ PASSWORD_CMD_KDE = [
 ]
 
 
-def get_key(appdir: Path, password: Optional[str]) -> Optional[str]:
+def get_key(appdir: Path, password: str | None) -> str | None:
     """Get key for decrypting database.
 
     Retrieves key depending on key encryption software.

@@ -1,6 +1,6 @@
 from typer import colors, secho
 
-verbose = False
+verbose: bool = False
 
 
 def log(msg: str, fg: str = colors.BLACK) -> None:

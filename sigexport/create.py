@@ -99,9 +99,9 @@ def create_message(
                 for c in contacts.values():
                     serviceId = c.serviceId
                     if serviceId is not None and serviceId == msg.source:
-                        sender = c.name
+                        sender = c.name or "No-Sender"
             else:
-                sender = contacts[msg.conversation_id].name
+                sender = contacts[msg.conversation_id].name or "No-Sender"
         except KeyError:
             log(f"\t\tNo sender:\t\t{date}")
 

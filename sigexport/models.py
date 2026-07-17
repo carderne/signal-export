@@ -9,6 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+JsonDict = dict[str, Any]
+
 
 @dataclass
 class RawMessage:
@@ -55,14 +57,21 @@ class Sticker:
     emoji: str
     extension: str | None = None
 
-    def get_path(self: Sticker, exportDest: Path = None) -> str | None:
-        if not exportDest:
+    def get_path(self: Sticker, export_dest: Path | None = None) -> str | None:
+        if not export_dest:
             if self.extension:
-                return "exported_stickers/" + self.packId + "/" + self.id + "." + self.extension
+                return (
+                    "exported_stickers/"
+                    + self.packId
+                    + "/"
+                    + self.id
+                    + "."
+                    + self.extension
+                )
             else:
                 return None
 
-        pack_path = Path(exportDest) / "exported_stickers" / self.packId
+        pack_path = Path(export_dest) / "exported_stickers" / self.packId
         if not pack_path.is_dir():
             return None
 
@@ -77,7 +86,7 @@ class Sticker:
 class Contact:
     id: str
     serviceId: str
-    name: str
+    name: str | None
     number: str
     profile_name: str
     is_group: bool
@@ -172,7 +181,7 @@ class Message:
         date = self.date.replace(second=0, microsecond=0)
         return (date, self.sender, self.body.replace("\n", "").replace(">", "").strip())
 
-    def dict(self: Message) -> dict:
+    def dict(self: Message) -> JsonDict:
         msg_dict = asdict(self)
         msg_dict["date"] = msg_dict["date"].isoformat()
         return msg_dict
@@ -207,7 +216,11 @@ class MergeMessage:
 
         p_stickers = r"\n\(\( (.*) \)\)"
         stickers = re.findall(p_stickers, self.body)
-        sticker = stickers[0] if stickers else ""
+        sticker = (
+            Sticker(id="", packId="", packKey="", emoji=stickers[0])
+            if stickers
+            else None
+        )
         body = re.sub(p_stickers, "", body)
 
         p_quote = re.compile(r"\n> (.*)$")

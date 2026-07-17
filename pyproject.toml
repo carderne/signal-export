@@ -1,7 +1,7 @@
 [tool.poe.tasks]
 fmt = "ruff format"
 lint = "ruff check --fix"
-check = "pyright"
+check = "ty check ."
 test = "pytest"
 
 all = [
@@ -16,7 +16,7 @@ name = "signal-export"
 description = "Export Signal conversations to Markdown and HTML"
 readme = "README.md"
 license = {text = "MIT License"}
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 keywords = ["backup", "chat", "export"]
 
 authors = [
@@ -45,9 +45,9 @@ dependencies = [
 dev = [
     "poethepoet",
     "ruff",
-    "pyright",
     "pytest",
     "pytest-cov",
+    "ty",
     "types-Markdown",
     "types-emoji",
 ]
@@ -70,7 +70,7 @@ includes = ["sigexport/"]
 source = "scm"
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py310"
 exclude = ["tests"]
 
 [tool.ruff.lint]
@@ -97,13 +97,3 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["sigexport"]
-
-[tool.pyright]
-venvPath = "."
-venv = ".venv"
-include = ["sigexport", "tests"]
-reportMissingImports = true
-reportMissingParameterType = true
-reportUnnecessaryTypeIgnoreComment = true
-reportDeprecated = true
-pythonVersion = "3.9"

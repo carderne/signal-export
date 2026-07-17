@@ -5,7 +5,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 from sigexport.models import Contact, Contacts
 
@@ -13,8 +13,8 @@ from sigexport.models import Contact, Contacts
 def export_channel_metadata(
     dest: Path,
     contacts: Contacts,
-    owner: Optional[Contact],
-    include_chats: Optional[list[str]] = None,
+    owner: Contact | None,
+    include_chats: list[str] | None = None,
 ) -> None:
     """for each channel, write two files containing information about that group's membership:
     "meta.json": a JSON object with member information
@@ -35,28 +35,29 @@ def export_channel_metadata(
         # ensure that the output folder for this channel exists
         os.makedirs(dest / name, exist_ok=True)
         members = [contacts_by_serviceId[m] for m in c.members] if c.members else []
-        group_meta = {
+        member_entries: list[dict[str, Any]] = [
+            {
+                "name": member.name,
+                "display_name": member.profile_name,
+                "number": member.number,
+                "other_groups": [
+                    g.name
+                    for g in all_groups
+                    # if the other group has this member too
+                    if member.serviceId in (g.members or [])
+                    # but not if we're looking at the current group
+                    if key != g.id
+                    # redact the owner's group memberships
+                    and member.serviceId != owner_service_id
+                ],
+            }
+            for member in members
+        ]
+        group_meta: dict[str, Any] = {
             "name": name,
             "exported_by": owner_name,
             "exported_on": datetime.now().isoformat(),
-            "members": [
-                {
-                    "name": member.name,
-                    "display_name": member.profile_name,
-                    "number": member.number,
-                    "other_groups": [
-                        g.name
-                        for g in all_groups
-                        # if the other group has this member too
-                        if member.serviceId in (g.members or [])
-                        # but not if we're looking at the current group
-                        if key != g.id
-                        # redact the owner's group memberships
-                        and member.serviceId != owner_service_id
-                    ],
-                }
-                for member in members
-            ],
+            "members": member_entries,
         }
         flat_meta = [
             {
@@ -66,7 +67,7 @@ def export_channel_metadata(
                 "num_shared_groups": len(m["other_groups"]),
                 **m,
             }
-            for m in group_meta["members"]
+            for m in member_entries
         ]
 
         members_json_path = dest / name / "meta.json"

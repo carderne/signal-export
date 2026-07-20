@@ -343,7 +343,7 @@ def check_stickers_existence(
                     str(msg.sticker["stickerId"]),
                     msg.sticker["packId"],
                     msg.sticker["packKey"],
-                    msg.sticker["emoji"],
+                    msg.sticker.get("emoji", ""),
                 )
                 if m_sticker.get_path(dest):
                     msg.sticker["extension"] = m_sticker.extension

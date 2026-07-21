@@ -59,7 +59,7 @@ def merge_with_old(
     chat_dict: models.Chats, contacts: models.Contacts, dest: Path, old: Path
 ) -> models.Chats:
     """Main function for merging new and old."""
-    new_chat_dict: models.Chats = {}
+    new_chat_dict = chat_dict.copy()
     for key, msgs in chat_dict.items():
         name = contacts[key].name
         # some contact names are None

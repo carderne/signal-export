@@ -355,4 +355,4 @@ def check_stickers_existence(
                         f"Not found: sticker {m_sticker.id} from pack '{m_sticker.packId}' used in conversation '{name}' at {date}, skipping",
                         fg=colors.MAGENTA,
                     )
-                    msg.sticker["extension"] = "unknown"
+                    msg.sticker["extension"] = None

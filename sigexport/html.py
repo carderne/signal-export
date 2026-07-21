@@ -99,9 +99,9 @@ def create_html(
 
             if sticker_path:
                 src = f"../{sticker_path}"
-                temp = templates.figure.format(src=src, alt=msg.sticker.emoji)
+                temp = templates.figure.format(src=src, alt=msg.sticker.label)
             else:
-                temp = "(( " + msg.sticker.emoji + " ))"
+                temp = "(( " + msg.sticker.label + " ))"
 
             if temp:
                 soup.append(BeautifulSoup(temp, "html.parser"))

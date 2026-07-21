@@ -131,7 +131,7 @@ def create_message(
             msg.sticker["packId"],
             msg.sticker["packKey"],
             msg.sticker.get("emoji", ""),
-            msg.sticker.get("extension", "unknown"),
+            msg.sticker.get("extension"),
         )
 
     quote = ""

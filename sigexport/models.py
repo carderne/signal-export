@@ -57,6 +57,11 @@ class Sticker:
     emoji: str
     extension: str | None = None
 
+    @property
+    def label(self: Sticker) -> str:
+        """Text stand-in for the sticker, as not every sticker has an emoji."""
+        return self.emoji or "sticker"
+
     def get_path(self: Sticker, export_dest: Path | None = None) -> str | None:
         if not export_dest:
             if self.extension:
@@ -166,9 +171,9 @@ class Message:
         if self.sticker:
             sticker_path = self.sticker.get_path()
             if sticker_path:
-                body += f"[{self.sticker.emoji}](../{sticker_path})  "
+                body += f"[{self.sticker.label}](../{sticker_path})  "
             else:
-                body = body + "\n(( " + self.sticker.emoji + " ))"
+                body = body + "\n(( " + self.sticker.label + " ))"
 
         for att in self.attachments:
             if is_image(att.path):

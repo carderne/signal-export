@@ -72,12 +72,14 @@ def decrypt_attachment(
     if len(decrypted_data) < int(att["size"]):
         raise ValueError("Invalid attachment data length")
 
+    dst_path_str = str(dst_path)
     if detect_file_type:
-        dst_path_str = str(dst_path)
         try:
             ext = filetype.guess_extension(decrypted_data)
         except TypeError:
             raise ValueError("Unsupported attachment file type")
+        if ext is None:
+            raise ValueError("Could not detect attachment file type")
 
         dst_path_str += "." + ext
 
@@ -355,4 +357,4 @@ def check_stickers_existence(
                         f"Not found: sticker {m_sticker.id} from pack '{m_sticker.packId}' used in conversation '{name}' at {date}, skipping",
                         fg=colors.MAGENTA,
                     )
-                    msg.sticker["extension"] = "unknown"
+                    msg.sticker["extension"] = None

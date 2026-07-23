@@ -64,6 +64,26 @@ def _format_call(call_history: dict[str, Any] | None) -> str:
         return "Incoming call" if call_history.get("wasIncoming") else "Outgoing call"
 
 
+def _describe_quote(quote: dict[str, Any] | None) -> str:
+    """Short label for a reply whose quoted message has no text of its own."""
+    if not isinstance(quote, dict):
+        return ""
+    attachments = quote.get("attachments") or []
+    for att in attachments:
+        if not isinstance(att, dict):
+            continue
+        content_type = (att.get("contentType") or "").lower()
+        if content_type.startswith("image/"):
+            return "Photo"
+        if content_type.startswith("video/"):
+            return "Video"
+        if content_type.startswith("audio/"):
+            return "Voice message"
+        name = att.get("fileName")
+        return str(name) if name else "Attachment"
+    return ""
+
+
 def create_message(
     msg: models.RawMessage,
     name: str,  # only used for debug logging
@@ -118,6 +138,13 @@ def create_message(
         path = Path(re.sub(r"\s", "%20", str(path)))
         attachments.append(models.Attachment(name=file_name, path=str(path)))
 
+    # The message had attachments but none reached the export (e.g.
+    # --no-attachments, or a newer DB that keeps them in a table we skipped).
+    # Leave a placeholder so they aren't silently dropped.
+    if not attachments and msg.has_attachments:
+        kind = "media" if msg.has_visual_media else "attachment"
+        attachments.append(models.Attachment(name="", path="", missing_kind=kind))
+
     reactions: list[models.Reaction] = []
     if msg.reactions:
         for r in msg.reactions:
@@ -142,12 +169,18 @@ def create_message(
 
     quote = ""
     if msg.quote:
+        quote_text = ""
         try:
-            quote = msg.quote["text"].rstrip("\n")
-            quote = quote.replace("\n", "\n> ")
-            quote = f"\n\n> {quote}\n\n"
-        except (AttributeError, KeyError, TypeError):
+            quote_text = (msg.quote.get("text") or "").rstrip("\n")
+        except (AttributeError, TypeError):
             pass
+        # A reply to an image/voice note has no quoted text; describe the
+        # attachment instead so it still reads as a reply.
+        if not quote_text:
+            quote_text = _describe_quote(msg.quote)
+        if quote_text:
+            quote_text = quote_text.replace("\n", "\n> ")
+            quote = f"\n\n> {quote_text}\n\n"
 
     return models.Message(
         date=date,

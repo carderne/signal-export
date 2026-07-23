@@ -1,6 +1,5 @@
 """Main script for sigexport."""
 
-import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -62,6 +61,12 @@ def main(
         False,
         "--overwrite/--no-overwrite",
         help="Overwrite contents of output directory if it exists",
+    ),
+    yes: bool = Option(
+        False,
+        "--yes",
+        "-y",
+        help="Skip the confirmation prompt when overwriting",
     ),
     verbose: bool = Option(False, "--verbose", "-v"),
     channel_members_only: bool = Option(
@@ -145,7 +150,7 @@ def main(
     if not dest.is_dir():
         dest.mkdir(parents=True, exist_ok=True)
     elif overwrite:
-        shutil.rmtree(dest)
+        utils.safe_delete(dest, yes=yes)
         dest.mkdir(parents=True, exist_ok=True)
     else:
         secho(

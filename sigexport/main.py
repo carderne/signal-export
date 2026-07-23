@@ -1,10 +1,11 @@
 """Main script for sigexport."""
 
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
 
-from typer import Argument, Context, Exit, Option, colors, run, secho
+from typer import Argument, Context, Exit, Option, colors, confirm, run, secho
 
 from sigexport import create, data, files, html, logging, merge, utils
 from sigexport.export_channel_metadata import export_channel_metadata
@@ -62,6 +63,12 @@ def main(
         False,
         "--overwrite/--no-overwrite",
         help="Overwrite contents of output directory if it exists",
+    ),
+    yes: bool = Option(
+        False,
+        "--yes",
+        "-y",
+        help="Skip the confirmation prompt when overwriting",
     ),
     verbose: bool = Option(False, "--verbose", "-v"),
     channel_members_only: bool = Option(
@@ -138,6 +145,7 @@ def main(
     if not dest.is_dir():
         dest.mkdir(parents=True, exist_ok=True)
     elif overwrite:
+        safe_overwrite(dest, yes=yes)
         shutil.rmtree(dest)
         dest.mkdir(parents=True, exist_ok=True)
     else:
@@ -213,6 +221,37 @@ def main(
                 ht_f.close()
 
     secho("Done!", fg=colors.GREEN)
+
+
+def safe_overwrite(dest: Path, yes: bool) -> None:
+    """Guard `--overwrite` before we recursively delete `dest`.
+
+    Refuses obviously dangerous targets (home, root, the cwd) and directories
+    that don't look like a previous export, and asks for confirmation when
+    running interactively.
+    """
+    reason = utils.is_dangerous_overwrite_target(dest)
+    if reason:
+        secho(
+            f"Refusing to overwrite {dest.resolve()}: that's {reason}.",
+            fg=colors.RED,
+        )
+        raise Exit(1)
+
+    if not utils.looks_like_export_dir(dest):
+        secho(
+            f"'{dest}' doesn't look like a signal-export output "
+            "(no style.css or chat folders), so it won't be deleted. "
+            "Remove it yourself or choose another path.",
+            fg=colors.RED,
+        )
+        raise Exit(1)
+
+    if not yes and sys.stdin.isatty():
+        count = sum(1 for _ in dest.iterdir())
+        if not confirm(f"Delete {count} item(s) in {dest.resolve()} and re-export?"):
+            secho("Aborted.", fg=colors.YELLOW)
+            raise Exit(1)
 
 
 def parse_input_dt(dt_string: str) -> datetime:

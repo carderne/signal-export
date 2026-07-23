@@ -36,6 +36,8 @@ class RawMessage:
     sticker: dict[str, Any] | None
     quote: dict[str, Any] | None
 
+    deleted: bool = False
+
     def get_ts(self: RawMessage) -> int:
         if self.sent_at and self.server_timestamp:
             if self.server_timestamp < self.sent_at:
@@ -159,9 +161,14 @@ class Message:
     sticker: Sticker | None
     reactions: list[Reaction]
     attachments: list[Attachment]
+    deleted: bool = False
+    call: bool = False
+    missed: bool = False
 
     def to_md(self: Message) -> str:
         date_str = self.date.strftime("%Y-%m-%d %H:%M:%S")
+        if self.deleted:
+            return f"[{date_str}] {self.sender}: (This message was deleted)\n"
         body = self.body
 
         if len(self.reactions) > 0:

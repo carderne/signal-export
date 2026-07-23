@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from sigexport import html, models
 
@@ -18,6 +19,9 @@ def msg(
         sticker=kwargs.get("sticker"),  # type: ignore[arg-type]
         reactions=kwargs.get("reactions", []),  # type: ignore[arg-type]
         attachments=kwargs.get("attachments", []),  # type: ignore[arg-type]
+        deleted=kwargs.get("deleted", False),  # type: ignore[arg-type]
+        call=kwargs.get("call", False),  # type: ignore[arg-type]
+        missed=kwargs.get("missed", False),  # type: ignore[arg-type]
     )
 
 
@@ -87,3 +91,69 @@ def test_image_attachment_gets_lightbox() -> None:
     out = html.create_html("Chat", [msg(attachments=[attachment])])
     assert "modal-state" in out
     assert "media/cat.jpg" in out
+
+
+def test_deleted_message_shows_placeholder_not_blank() -> None:
+    """A message deleted for everyone should read as deleted, not an empty bubble."""
+    out = html.create_html("Chat", [msg(body="", deleted=True)])
+    assert "deleted" in out
+    assert "This message was deleted" in out
+
+
+def test_deleted_message_hides_original_content() -> None:
+    """Any residual body/attachment must not leak out of a deleted message."""
+    attachment = models.Attachment(name="secret.jpg", path="media/secret.jpg")
+    out = html.create_html(
+        "Chat", [msg(body="oops wrong chat", deleted=True, attachments=[attachment])]
+    )
+    assert "oops wrong chat" not in out
+    assert "secret.jpg" not in out
+    assert "This message was deleted" in out
+
+
+def test_deleted_message_markdown_placeholder() -> None:
+    """The Markdown export should not emit a blank line for a deleted message."""
+    rendered = msg(body="", deleted=True).to_md()
+    assert "(This message was deleted)" in rendered
+
+
+def test_call_renders_as_event_not_bubble() -> None:
+    out = html.create_html("Chat", [msg(body="Incoming voice call (accepted)", call=True)])
+    assert 'class="event' in out
+    assert "Incoming voice call (accepted)" in out
+    # not a chat bubble
+    assert 'class="msg' not in out
+
+
+def test_missed_call_gets_missed_class() -> None:
+    out = html.create_html("Chat", [msg(body="Missed voice call", call=True, missed=True)])
+    assert "event call missed" in out
+
+
+def test_video_call_uses_video_icon() -> None:
+    out = html.create_html(
+        "Chat", [msg(body="Outgoing video call (accepted)", call=True)]
+    )
+    assert "\U0001f4f9" in out  # video camera
+
+
+def test_missing_attachment_shows_placeholder(tmp_path: Path) -> None:
+    """An image whose file isn't in the export reads as excluded, not blank."""
+    attachment = models.Attachment(name="photo.jpg", path="media/photo.jpg")
+    # tmp_path has no media/photo.jpg, so it counts as not exported
+    out = html.create_html(
+        "Chat", [msg(body="pic", attachments=[attachment])], media_dir=tmp_path
+    )
+    assert "Image not exported" in out
+    assert "<img" not in out
+
+
+def test_present_attachment_renders_normally(tmp_path: Path) -> None:
+    attachment = models.Attachment(name="photo.jpg", path="media/photo.jpg")
+    (tmp_path / "media").mkdir()
+    (tmp_path / "media" / "photo.jpg").write_bytes(b"x")
+    out = html.create_html(
+        "Chat", [msg(body="pic", attachments=[attachment])], media_dir=tmp_path
+    )
+    assert "not exported" not in out
+    assert "media/photo.jpg" in out

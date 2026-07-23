@@ -251,6 +251,26 @@ body:not(:has(.page:target)) main > .page:first-child {
     background-color: var(--border);
 }
 
+/* calls (and other non-message events) render centred, not as bubbles */
+.event {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin: 0.6rem 0;
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+.event .event-time {
+    opacity: 0.7;
+    font-variant-numeric: tabular-nums;
+}
+
+.event.missed {
+    color: light-dark(#c0342b, #f2857c);
+}
+
 .msg {
     width: fit-content;
     max-width: min(70ch, 80%);
@@ -306,6 +326,25 @@ body:not(:has(.page:target)) main > .page:first-child {
 
 .body > p:last-child {
     margin-bottom: 0;
+}
+
+/* deleted-for-everyone placeholder */
+.msg.deleted {
+    background-color: transparent;
+    border-style: dashed;
+    box-shadow: none;
+}
+
+.msg.deleted .body {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--muted);
+}
+
+.msg.deleted .body::before {
+    content: "\1F6AB"; /* no-entry sign */
+    font-style: normal;
 }
 
 .quote {
@@ -371,6 +410,13 @@ audio {
     border-radius: 8px;
     background-color: var(--surface-2);
     font-size: 0.85rem;
+}
+
+.file.missing {
+    border-style: dashed;
+    background-color: transparent;
+    color: var(--muted);
+    font-style: italic;
 }
 
 .modal {

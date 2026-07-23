@@ -189,7 +189,7 @@ def fetch_data(
     owner_row = c.execute("select ourServiceId from sessions").fetchone()
     owner_id = owner_row[0] if owner_row is not None else None
     contact_by_service_id: models.Contacts = {c.serviceId: c for c in contacts.values()}
-    owner_contact = contact_by_service_id[owner_id] if owner_id else None
+    owner_contact = contact_by_service_id.get(owner_id) if owner_id else None
 
     return convos, contacts, owner_contact
 

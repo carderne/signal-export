@@ -24,7 +24,7 @@ An export for a group conversation looks as follows:
 
 Images are attached inline with `![name](path)` while other attachments (voice notes, videos, documents) are included as links like `[name](path)` so a click will take you to the file.
 
-This is converted to HTML at the end so it can be opened with any web browser. The stylesheet `.css` is still very basic but I'll get to it sooner or later.
+This is converted to HTML at the end so it can be opened with any web browser. The HTML export is styled as a chat view with grouped messages, day dividers, reactions, and an image lightbox. It follows your browser/OS light or dark preference by default, and a switcher in the top bar lets you pin light or dark (remembered per browser).
 
 ## 🐧 Installation
 

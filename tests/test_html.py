@@ -157,3 +157,18 @@ def test_present_attachment_renders_normally(tmp_path: Path) -> None:
     )
     assert "not exported" not in out
     assert "media/photo.jpg" in out
+
+
+def test_image_reply_renders_as_quote() -> None:
+    """A reply whose quote is just a photo label still shows the reply block."""
+    out = html.create_html("Chat", [msg(body="nice", quote="\n\n> Photo\n\n")])
+    assert 'class="quote"' in out
+    assert "Photo" in out
+
+
+def test_sentinel_attachment_renders_placeholder() -> None:
+    """An attachment marked missing (no file at all) shows its placeholder."""
+    att = models.Attachment(name="", path="", missing_kind="media")
+    out = html.create_html("Chat", [msg(body="here", attachments=[att])])
+    assert "Media not exported" in out
+    assert "<img" not in out

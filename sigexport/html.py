@@ -21,13 +21,14 @@ GROUP_WINDOW = timedelta(minutes=5)
 
 URL_PATTERN = re.compile(r"(https{0,1}://\S*)")
 
-# label and icon for an attachment we couldn't include in the export
-MISSING_KINDS = (
-    (models.is_image, "Image not exported", "\U0001f5bc️"),  # framed picture
-    (models.is_audio, "Audio not exported", "\U0001f50a"),  # speaker
-    (models.is_video, "Video not exported", "\U0001f3ac"),  # clapper board
-)
-MISSING_DEFAULT = ("Attachment not exported", "\U0001f4ce")  # paperclip
+# label and icon for each kind of attachment we couldn't include in the export
+MISSING_LABELS = {
+    "image": ("Image not exported", "\U0001f5bc️"),  # framed picture
+    "audio": ("Audio not exported", "\U0001f50a"),  # speaker
+    "video": ("Video not exported", "\U0001f3ac"),  # clapper board
+    "media": ("Media not exported", "\U0001f5bc️"),  # framed picture
+    "attachment": ("Attachment not exported", "\U0001f4ce"),  # paperclip
+}
 
 
 def _exported(media_dir: Path | None, path: str) -> bool:
@@ -40,13 +41,19 @@ def _exported(media_dir: Path | None, path: str) -> bool:
     return (media_dir / unquote(path)).exists()
 
 
-def _missing_attachment(path: str) -> str:
+def _kind_from_path(path: str) -> str:
+    if models.is_image(path):
+        return "image"
+    if models.is_audio(path):
+        return "audio"
+    if models.is_video(path):
+        return "video"
+    return "attachment"
+
+
+def _missing_attachment(kind: str) -> str:
     """Placeholder for an attachment that isn't present in the export."""
-    label, icon = MISSING_DEFAULT
-    for matches, kind_label, kind_icon in MISSING_KINDS:
-        if matches(path):
-            label, icon = kind_label, kind_icon
-            break
+    label, icon = MISSING_LABELS.get(kind, MISSING_LABELS["attachment"])
     return templates.attachment_missing.format(icon=icon, label=label)
 
 
@@ -100,8 +107,10 @@ def make_body(msg: models.Message, fid: str, media_dir: Path | None) -> str:
         path = att.path
         src = f"./{path}"
         alt = escape(att.name, quote=True)
-        if not _exported(media_dir, path):
-            temp = _missing_attachment(path)
+        if att.missing_kind is not None:
+            temp = _missing_attachment(att.missing_kind)
+        elif not _exported(media_dir, path):
+            temp = _missing_attachment(_kind_from_path(path))
         elif models.is_image(path):
             temp = templates.figure.format(fid=f"{fid}-{i}", src=src, alt=alt)
         elif models.is_audio(path):

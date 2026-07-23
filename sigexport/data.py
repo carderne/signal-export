@@ -180,6 +180,7 @@ def fetch_data(
                 sticker=jsonLoaded.get("sticker"),
                 quote=jsonLoaded.get("quote"),
                 deleted=bool(jsonLoaded.get("deletedForEveryone")),
+                has_visual_media=bool(jsonLoaded.get("hasVisualMediaAttachments")),
             )
 
             convos[cid].append(con)

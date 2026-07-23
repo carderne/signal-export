@@ -76,8 +76,14 @@ def create_message(
         log("\t\tNo timestamp or sent_at; date set to 1970")
     log(f"\t\tDoing {name}, msg: {date}")
 
-    if msg.type == "call-history":
+    is_call = msg.type == "call-history"
+    missed_call = False
+    if is_call:
         body = _format_call(msg.call_history)
+        status = (msg.call_history or {}).get("status", "")
+        missed_call = status in ("Missed", "NotAccepted", "Declined") or any(
+            marker in body for marker in ("Missed", "unanswered", "declined")
+        )
     else:
         body = msg.body or ""
 
@@ -151,6 +157,9 @@ def create_message(
         sticker=sticker,
         reactions=reactions,
         attachments=attachments,
+        deleted=msg.deleted,
+        call=is_call,
+        missed=missed_call,
     )
 
 

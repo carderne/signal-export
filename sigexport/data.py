@@ -202,6 +202,7 @@ def fetch_data(
                 reactions=jsonLoaded.get("reactions", []),
                 sticker=jsonLoaded.get("sticker"),
                 quote=jsonLoaded.get("quote"),
+                deleted=bool(jsonLoaded.get("deletedForEveryone")),
             )
 
             convos[cid].append(con)

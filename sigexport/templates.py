@@ -75,6 +75,23 @@ meta = """
 
 quote = "<div class=quote>{text}</div>"
 
+deleted = "<em>This message was deleted</em>"
+
+event = """
+<div class='event {cls}'>
+    <span class=event-icon aria-hidden=true>{icon}</span>
+    <span>{text}</span>
+    <time class=event-time datetime='{iso}' title='{date}'>{time}</time>
+</div>
+"""
+
+attachment_missing = """
+<div class='file missing'>
+    <span aria-hidden=true>{icon}</span>
+    <span>{label}</span>
+</div>
+"""
+
 reactions = "<div class=reactions>{chips}</div>"
 
 reaction = "<span class=reaction>{emoji}<span class=who>{name}</span></span>"

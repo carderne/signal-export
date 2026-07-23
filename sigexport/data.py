@@ -7,7 +7,7 @@ from pathlib import Path
 from sqlcipher3 import dbapi2
 from typer import Exit, colors, secho
 
-from sigexport import crypto, models
+from sigexport import crypto, models, utils
 from sigexport.logging import log
 
 
@@ -68,6 +68,7 @@ def fetch_data(
     include_disappearing: bool,
     start_date: datetime | None = None,
     end_date: datetime | None = None,
+    nicknames: bool = False,
 ) -> tuple[models.Convos, models.Contacts, models.Contact | None]:
     """Load SQLite data into dicts.
     :returns: a tuple of:
@@ -84,8 +85,9 @@ def fetch_data(
 
     call_directions = _load_call_directions(c)
 
-    query = "SELECT type, id, serviceId, e164, name, profileName, members FROM conversations"
+    query = "SELECT type, id, serviceId, e164, name, profileName, members, json FROM conversations"
     c.execute(query)
+    nickname_count = 0
     for result in c:
         log(f"\tLoading SQL results for: {result[4]}, aka {result[5]}")
         members = []
@@ -93,20 +95,41 @@ def fetch_data(
             members = result[6].split(" ")
         is_group = result[0] == "group"
         cid = result[1]
+
+        # Nicknames live in the conversation JSON, not a dedicated column.
+        nickname = None
+        if nicknames and result[7]:
+            try:
+                conv_json = json.loads(result[7])
+            except (TypeError, ValueError):
+                conv_json = {}
+            nickname = utils.format_nickname(
+                conv_json.get("nicknameGivenName"),
+                conv_json.get("nicknameFamilyName"),
+            )
+            if nickname:
+                nickname_count += 1
+
         contact = models.Contact(
             id=cid,
             serviceId=result[2],
-            name=result[4],
+            name=utils.display_name(result[4], result[5], nickname),
             number=result[3],
             profile_name=result[5],
             members=members,
             is_group=is_group,
         )
-        if contact.name is None:
-            contact.name = contact.profile_name
         contacts[cid] = contact
-        if not chats or (result[4] in chats_list or result[5] in chats_list):
+
+        match_names = [result[4], result[5], nickname]
+        if not chats or any(n and n in chats_list for n in match_names):
             convos[cid] = []
+
+    if nicknames and nickname_count == 0:
+        secho(
+            "Note: --nicknames was set but no nicknames were found in this Signal DB.",
+            fg=colors.YELLOW,
+        )
 
     # Check which columns exist (older DB schemas may be missing some)
     c.execute("PRAGMA table_info(messages)")

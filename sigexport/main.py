@@ -72,6 +72,12 @@ def main(
     attachments: bool = Option(
         True, "--attachments/--no-attachments", help="Whether to copy attachments"
     ),
+    nicknames: bool = Option(
+        False,
+        "--nicknames/--no-nicknames",
+        help="Use Signal nicknames (where set) for names and folders, "
+        "instead of profile names",
+    ),
     _: bool = Option(False, "--version", callback=utils.version_callback),
 ) -> None:
     """
@@ -121,6 +127,7 @@ def main(
         include_disappearing=include_disappearing,
         start_date=parsed_start_date,
         end_date=parsed_end_date,
+        nicknames=nicknames,
     )
 
     if list_chats:

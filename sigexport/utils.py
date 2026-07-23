@@ -84,6 +84,72 @@ def source_location() -> Path:
     return source_path
 
 
+# Top-level system directories that should never *themselves* be a target.
+# We only refuse an exact match (not their contents), so e.g. /var/backups is
+# still allowed; that case is handled by the looks-like-an-export check.
+SYSTEM_DIRS = (
+    "/bin",
+    "/boot",
+    "/dev",
+    "/etc",
+    "/lib",
+    "/lib64",
+    "/opt",
+    "/proc",
+    "/root",
+    "/run",
+    "/sbin",
+    "/sys",
+    "/usr",
+    "/var",
+)
+
+
+def is_dangerous_overwrite_target(dest: Path) -> str | None:
+    """Return a reason string if `dest` is too dangerous to delete, else None.
+
+    These paths are never a legitimate export target, so `--overwrite` must
+    refuse them outright rather than recursively deleting them.
+    """
+    resolved = dest.expanduser().resolve()
+    if resolved == Path(resolved.anchor):
+        return "the filesystem root"
+    if resolved == Path.home().resolve():
+        return "your home directory"
+    cwd = Path.cwd().resolve()
+    if resolved == cwd:
+        return "the current working directory"
+    if resolved in cwd.parents:
+        return "a parent of the current working directory"
+    for sysdir in SYSTEM_DIRS:
+        # resolve() so /var matches even where it's a symlink (e.g. macOS)
+        if resolved == Path(sysdir).resolve():
+            return f"a system directory ({sysdir})"
+    return None
+
+
+def looks_like_export_dir(dest: Path) -> bool:
+    """Whether `dest` looks like a previous signal-export output.
+
+    Used to avoid `--overwrite` deleting an arbitrary directory the user
+    pointed at by mistake. An empty directory is fine; otherwise we look for
+    our own artifacts (the root stylesheet, or a chat folder with its files).
+    """
+    try:
+        entries = list(dest.iterdir())
+    except OSError:
+        return False
+    if not entries:
+        return True
+    if (dest / "style.css").is_file():
+        return True
+    markers = ("chat.md", "index.html", "data.json")
+    for child in entries:
+        if child.is_dir() and any((child / m).is_file() for m in markers):
+            return True
+    return False
+
+
 def fix_names(contacts: models.Contacts) -> models.Contacts:
     """Convert contact names to filesystem-friendly."""
     fixed_contact_names = set()

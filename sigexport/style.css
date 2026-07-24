@@ -1,65 +1,55 @@
+/* signal-export stylesheet.
+   Colours are defined once with light-dark(); the theme switcher just flips
+   color-scheme on <html>, and "auto" means we follow the browser/OS setting. */
+
+:root {
+    color-scheme: light dark;
+
+    --bg: light-dark(#f2f3f5, #15171a);
+    --surface: light-dark(#ffffff, #1e2126);
+    --surface-2: light-dark(#e9ebef, #262a30);
+    --text: light-dark(#181a1d, #e4e7ea);
+    --muted: light-dark(#5f6672, #99a1ac);
+    --border: light-dark(#dfe2e7, #30353c);
+    --accent: light-dark(#2b6cee, #85aaff);
+
+    --bubble-in: light-dark(#ffffff, #22262c);
+    --bubble-in-border: light-dark(#e2e5ea, #30353c);
+    --bubble-out: light-dark(#dbe8ff, #21395f);
+    --bubble-out-border: light-dark(#c5d9fb, #2c4b7c);
+
+    --shadow: 0 1px 2px light-dark(rgba(16, 20, 26, 0.09), rgba(0, 0, 0, 0.45));
+    --radius: 14px;
+
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, Carlito, Calibri,
+        sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
+}
+
+/* Manual overrides from the theme switcher. */
+:root[data-theme="light"] {
+    color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+}
+
 * {
     box-sizing: border-box;
 }
 
-html {
-    background-color: #F6F6F6;
-}
-
 body {
-    color: rgb(73, 78, 82);
-    font-family: Carlito, Calibri, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
     line-height: 1.5;
     margin: 0;
-}
-
-.first, .last, .next, .prev {
-    position: fixed;
-    left: 0;
-    font-size: 3em;
-    margin: 20px;
-}
-
-.first {
-    top: 0;
-}
-
-.prev {
-    top: 20%;
-}
-
-.next {
-    bottom: 20%;
-}
-
-.last {
-    bottom: 0;
-}
-
-.page {
-    display: none;
-    padding: 20px;
-}
-
-.page:target {
-    display: block;
-}
-
-.msg {
-    width: 70ch;
-    border-radius: 5px;
-    padding: 0.8rem 0.8rem 2rem 0.8rem;
-    margin-left: 150px;
-    background-color: #cecace;
-}
-
-.msg.me {
-    margin-left: 450px;
-    background-color: #bfd9d7;
+    /* room for the floating pager */
+    padding-bottom: 5rem;
 }
 
 a {
-    color: rgb(52, 105, 160);
+    color: var(--accent);
     text-decoration: none;
 }
 
@@ -67,64 +57,392 @@ a:hover {
     text-decoration: underline;
 }
 
-div {
-    margin-bottom: 2em;
+/* ---------- header ---------- */
+
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background-color: light-dark(rgba(255, 255, 255, 0.82), rgba(21, 23, 26, 0.82));
+    backdrop-filter: blur(10px);
 }
 
-.date, .time {
-    float: right;
+.chat-title {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.time {
-    clear: right;
+/* The switcher does nothing without JS, so only show it once JS says hello.
+   Auto theming still works: it is pure CSS. */
+html:not(.js) .theme-switch {
+    display: none;
 }
 
-.sender {
-    font-weight: bold;
+.theme-switch {
+    display: inline-flex;
+    flex: none;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background-color: var(--surface-2);
 }
 
-.body {
-    display: block;
-    margin-left: 3em;
-    word-wrap: break-word;
-}
-
-figure > label > img, video {
-    display: block;
-    width: 300px;
-}
-
-label > img {
+.theme-switch button {
+    font: inherit;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    padding: 0 0.6rem;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    color: var(--muted);
     cursor: pointer;
 }
 
+.theme-switch button:hover {
+    color: var(--text);
+}
+
+.theme-switch button[aria-pressed="true"] {
+    background-color: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+}
+
+/* ---------- pages ---------- */
+
+main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.page {
+    display: none;
+}
+
+.page:target {
+    display: block;
+}
+
+/* No hash yet (fresh open, no JS): show the first page. */
+body:not(:has(.page:target)) main > .page:first-child {
+    display: block;
+}
+
+.pager {
+    position: fixed;
+    left: 50%;
+    bottom: 1rem;
+    z-index: 20;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.25rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background-color: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.pager a,
+.pager span.step {
+    display: block;
+    min-width: 2rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    text-align: center;
+    font-size: 1.1rem;
+    line-height: 1.5;
+}
+
+.pager a:hover {
+    background-color: var(--surface-2);
+    text-decoration: none;
+}
+
+.pager span.step {
+    color: var(--muted);
+    opacity: 0.4;
+}
+
+.pager .pageno {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.15rem;
+    padding: 0 0.4rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.pagejump {
+    field-sizing: content;
+    min-width: 1.4rem;
+    max-width: 5rem;
+    padding: 0.05rem 0.2rem;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    /* strip the number-spinner arrows */
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.pagejump::-webkit-outer-spin-button,
+.pagejump::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* readonly = no JS: render as plain text, not an obvious input */
+.pagejump:read-only {
+    cursor: default;
+}
+
+.pagejump:not(:read-only) {
+    color: var(--text);
+    cursor: text;
+}
+
+.pagejump:not(:read-only):hover {
+    border-color: var(--border);
+}
+
+.pagejump:focus {
+    outline: none;
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+/* ---------- messages ---------- */
+
+.day {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.5rem 0 1rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+.day::before,
+.day::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background-color: var(--border);
+}
+
+/* calls (and other non-message events) render centred, not as bubbles */
+.event {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin: 0.6rem 0;
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+.event .event-time {
+    opacity: 0.7;
+    font-variant-numeric: tabular-nums;
+}
+
+.event.missed {
+    color: light-dark(#c0342b, #f2857c);
+}
+
+.msg {
+    width: fit-content;
+    max-width: min(70ch, 80%);
+    margin: 0 0 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--bubble-in-border);
+    border-radius: var(--radius);
+    background-color: var(--bubble-in);
+    box-shadow: var(--shadow);
+}
+
+.msg.me {
+    margin-left: auto;
+    border-color: var(--bubble-out-border);
+    background-color: var(--bubble-out);
+}
+
+/* Follow-on message from the same sender. */
+.msg.cont {
+    margin-top: -0.25rem;
+}
+
+.meta {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.15rem;
+    font-size: 0.78rem;
+}
+
+.sender {
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.msg.me .sender {
+    color: var(--muted);
+}
+
+.time {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.body {
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+}
+
+.body > p:first-child {
+    margin-top: 0;
+}
+
+.body > p:last-child {
+    margin-bottom: 0;
+}
+
+/* deleted-for-everyone placeholder */
+.msg.deleted {
+    background-color: transparent;
+    border-style: dashed;
+    box-shadow: none;
+}
+
+.msg.deleted .body {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--muted);
+}
+
+.msg.deleted .body::before {
+    content: "\1F6AB"; /* no-entry sign */
+    font-style: normal;
+}
+
+.quote {
+    margin: 0 0 0.4rem;
+    padding: 0.3rem 0.6rem;
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+    font-size: 0.92em;
+    color: var(--muted);
+}
+
+.reactions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.4rem;
+}
+
+.reaction {
+    padding: 0 0.45rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background-color: var(--surface-2);
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+.reaction .who {
+    margin-left: 0.25rem;
+}
+
+/* ---------- attachments ---------- */
+
+figure {
+    margin: 0.4rem 0 0;
+}
+
+figure img,
+video {
+    display: block;
+    max-width: min(320px, 100%);
+    border-radius: 10px;
+}
+
+label > img {
+    cursor: zoom-in;
+}
+
+audio {
+    display: block;
+    width: min(320px, 100%);
+    margin-top: 0.4rem;
+}
+
+.file {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background-color: var(--surface-2);
+    font-size: 0.85rem;
+}
+
+.file.missing {
+    border-style: dashed;
+    background-color: transparent;
+    color: var(--muted);
+    font-style: italic;
+}
+
 .modal {
+    position: fixed;
+    inset: 0;
+    z-index: 99;
+    background-color: rgba(0, 0, 0, 0.85);
     opacity: 0;
     visibility: hidden;
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    text-align: left;
-    background: rgba(0, 0, 0, 0.8);
-    transition: opacity .25s ease;
-    z-index: 99;
+    transition: opacity 0.2s ease;
+    cursor: zoom-out;
 }
 
 .modal-content {
-    width: 100vw;
-    height: 100vh;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 2rem;
 }
 
 .modal-photo {
-    width: 70%;
-    max-height: 80%;
-    position: absolute;
-    left: 50%;
-    top: 10%;
-    margin-left: -35%;
-    object-fit: scale-down;
+    max-width: 95vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 8px;
 }
 
 .modal-state {
@@ -136,13 +454,37 @@ label > img {
     visibility: visible;
 }
 
-.reaction {
-    float: right;
+/* ---------- small screens ---------- */
+
+@media (max-width: 640px) {
+    main {
+        padding: 0.5rem;
+    }
+
+    .msg {
+        max-width: 92%;
+    }
+
+    .theme-switch button {
+        padding: 0 0.45rem;
+    }
 }
 
-.quote {
-    margin: .5rem 0 1rem 1rem;
-    background-color: #f7f6ff;
-    width: 50%;
-    padding: 1rem;
+/* ---------- print ---------- */
+
+@media print {
+    .topbar,
+    .pager {
+        display: none;
+    }
+
+    .page,
+    body:not(:has(.page:target)) main > .page:first-child {
+        display: block;
+    }
+
+    .msg {
+        break-inside: avoid;
+        box-shadow: none;
+    }
 }

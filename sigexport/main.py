@@ -209,7 +209,10 @@ def main(
                     print(msg.dict_str(), file=js_f)
             if ht_f:
                 ht = html.create_html(
-                    name=name, messages=messages, msgs_per_page=paginate
+                    name=name,
+                    messages=messages,
+                    msgs_per_page=paginate,
+                    media_dir=dest / name,
                 )
                 print(ht, file=ht_f)
         finally:

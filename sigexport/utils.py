@@ -84,6 +84,32 @@ def source_location() -> Path:
     return source_path
 
 
+def format_nickname(given: str | None, family: str | None) -> str | None:
+    """Combine Signal's nickname given/family parts into one name, or None.
+
+    Signal stores nicknames split into given and family parts in the
+    conversation JSON (`nicknameGivenName` / `nicknameFamilyName`); either may
+    be absent.
+    """
+    parts = [p.strip() for p in (given, family) if p and p.strip()]
+    return " ".join(parts) if parts else None
+
+
+def display_name(
+    name: str | None, profile_name: str | None, nickname: str | None
+) -> str | None:
+    """Pick the name to show for a contact.
+
+    A nickname (when present and requested) wins, then the system/contact
+    name, then the profile name; mirrors Signal's own precedence.
+    """
+    if nickname:
+        return nickname
+    if name is not None:
+        return name
+    return profile_name
+
+
 def fix_names(contacts: models.Contacts) -> models.Contacts:
     """Convert contact names to filesystem-friendly."""
     fixed_contact_names = set()

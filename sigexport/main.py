@@ -153,6 +153,11 @@ def main(
         )
         raise Exit()
 
+    # The conversation with your own account is Signal's "Note to Self"; it
+    # usually has no name and would otherwise land in the shared "None" folder.
+    if owner is not None:
+        owner.name = "Note to Self"
+
     contacts = utils.fix_names(contacts)
 
     if stickers:

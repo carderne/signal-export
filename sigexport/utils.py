@@ -111,25 +111,33 @@ def display_name(
 
 
 def fix_names(contacts: models.Contacts) -> models.Contacts:
-    """Convert contact names to filesystem-friendly."""
-    fixed_contact_names = set()
-    for key, item in contacts.items():
-        contact_name = item.number if item.name is None else item.name
-        if contacts[key].name is not None:
-            contacts[key].name = "".join(
-                x for x in emoji.demojize(contact_name) if x.isalnum()
-            )
-            if contacts[key].name == "":
-                contacts[key].name = "unnamed"
-            fixed_contact_name = contacts[key].name
-            if fixed_contact_name in fixed_contact_names:
-                name_differentiating_number = 2
-                while (
-                    fixed_contact_name + str(name_differentiating_number)
-                ) in fixed_contact_names:
-                    name_differentiating_number += 1
-                fixed_contact_name += str(name_differentiating_number)
-                contacts[key].name = fixed_contact_name
-            fixed_contact_names.add(fixed_contact_name)
+    """Convert contact names to filesystem-friendly, de-duplicating collisions.
+
+    Every contact ends up with a non-empty, unique name so each gets its own
+    output folder. Nameless contacts previously kept ``None`` and all collided
+    in a single ``None/`` folder (their messages interleaved); now they are
+    de-duplicated like any other clash.
+
+    Iteration is in a stable order (serviceId, then id) so the numeric suffixes
+    are deterministic across exports and a contact keeps the same folder from
+    run to run (important for ``--old`` merges).
+    """
+    used: set[str] = set()
+    for key in sorted(contacts, key=lambda k: (contacts[k].serviceId or "", k)):
+        item = contacts[key]
+        if item.name is None:
+            base = "None"
+        else:
+            base = "".join(x for x in emoji.demojize(item.name) if x.isalnum())
+            if base == "":
+                base = "unnamed"
+
+        name = base
+        suffix = 2
+        while name in used:
+            name = f"{base}{suffix}"
+            suffix += 1
+        used.add(name)
+        item.name = name
 
     return contacts

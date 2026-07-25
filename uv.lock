@@ -489,7 +489,7 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = "~=4.11" },
     { name = "emoji", specifier = "~=2.0" },
     { name = "filetype", specifier = ">=1.2.0" },
-    { name = "markdown", specifier = "~=3.4" },
+    { name = "markdown", specifier = ">=3.8.1,<4" },
     { name = "pycryptodome", specifier = "~=3.20" },
     { name = "sqlcipher3-wheels", specifier = ">=0.5.4" },
     { name = "typer", specifier = ">=0.12.1" },

@@ -73,7 +73,10 @@ def create_html(
             log(f"Maximum recursion on message {body}, not converted")
 
         # links
-        p = re.compile(r"(https{0,1}://\S*)")
+        # Stop at "<" as well as whitespace: the body has already been
+        # converted to HTML, so a URL at the end of a line or message is
+        # directly followed by a tag such as "</p>" or "<br />".
+        p = re.compile(r"(https{0,1}://[^\s<]*)")
         a_template = r"<a href='\1' target='_blank'>\1</a> "
         body = re.sub(p, a_template, body)
 

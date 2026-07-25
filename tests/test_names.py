@@ -1,4 +1,27 @@
-from sigexport import models, utils
+from sigexport import create, models, utils
+
+
+def raw(**kwargs: object) -> models.RawMessage:
+    base = dict(
+        conversation_id="c",
+        id="i",
+        body="hi",
+        type="incoming",
+        source=None,
+        timestamp=1,
+        sent_at=1,
+        server_timestamp=None,
+        has_attachments=False,
+        attachments=[],
+        read_status=None,
+        seen_status=None,
+        call_history=None,
+        reactions=[],
+        sticker=None,
+        quote=None,
+    )
+    base.update(kwargs)
+    return models.RawMessage(**base)  # type: ignore[arg-type]
 
 
 def contact(
@@ -66,3 +89,33 @@ def test_emoji_only_name_falls_back_to_unnamed() -> None:
     # a name that demojizes to nothing alphanumeric... use a bare symbol
     out = names({"1": contact("1", "!!!", "a")})
     assert out == {"1": "unnamed"}
+
+
+def test_display_drops_the_folder_dedup_suffix() -> None:
+    """Folders disambiguate (Alice / Alice2) but both still read "Alice"."""
+    contacts = {"1": contact("1", "Alice", "a"), "2": contact("2", "Alice", "b")}
+    utils.fix_names(contacts)
+    assert (contacts["1"].name, contacts["2"].name) == ("Alice", "Alice2")
+    assert (contacts["1"].display, contacts["2"].display) == ("Alice", "Alice")
+
+
+def test_group_sender_uses_display_not_suffixed_folder() -> None:
+    """A message from the de-duplicated "Alice2" should still read "Alice"."""
+    contacts = {
+        "a": contact("a", "Alice", "sid-a"),
+        "b": contact("b", "Alice", "sid-b"),
+    }
+    utils.fix_names(contacts)  # a -> Alice, b -> Alice2 (by serviceId order)
+    msg = create.create_message(raw(source="sid-b"), "grp", True, contacts)
+    assert msg.sender == "Alice"
+
+
+def test_one_to_one_sender_uses_display() -> None:
+    contacts = {
+        "a": contact("a", "Alice", "sid-a"),
+        "b": contact("b", "Alice", "sid-b"),
+    }
+    utils.fix_names(contacts)
+    # a 1:1 message in conversation "b" (the de-duplicated Alice2)
+    msg = create.create_message(raw(conversation_id="b"), "Alice2", False, contacts)
+    assert msg.sender == "Alice"

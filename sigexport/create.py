@@ -125,9 +125,10 @@ def create_message(
                 for c in contacts.values():
                     serviceId = c.serviceId
                     if serviceId is not None and serviceId == msg.source:
-                        sender = c.name or "No-Sender"
+                        sender = c.display or c.name or "No-Sender"
             else:
-                sender = contacts[msg.conversation_id].name or "No-Sender"
+                contact = contacts[msg.conversation_id]
+                sender = contact.display or contact.name or "No-Sender"
         except KeyError:
             log(f"\t\tNo sender:\t\t{date}")
 
@@ -149,8 +150,9 @@ def create_message(
     if msg.reactions:
         for r in msg.reactions:
             try:
+                reactor = contacts[r["fromId"]]
                 reactions.append(
-                    models.Reaction(contacts[r["fromId"]].name, r["emoji"])
+                    models.Reaction(reactor.display or reactor.name, r["emoji"])
                 )
             except KeyError:
                 log(

@@ -73,7 +73,9 @@ def create_html(
             log(f"Maximum recursion on message {body}, not converted")
 
         # links
-        p = re.compile(r"(https{0,1}://\S*)")
+        # body is already HTML at this point, so stop at '<' to avoid swallowing
+        # the tags Markdown emitted (e.g. a trailing </p>) into the href
+        p = re.compile(r"(https{0,1}://[^\s<]*)")
         a_template = r"<a href='\1' target='_blank'>\1</a> "
         body = re.sub(p, a_template, body)
 

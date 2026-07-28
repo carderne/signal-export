@@ -146,6 +146,10 @@ def main(
         )
         raise Exit()
 
+    if not convos:
+        secho("No chats to export, didn't do anything!", fg=colors.RED)
+        raise Exit()
+
     dest = Path(dest).expanduser()
     if not dest.is_dir():
         dest.mkdir(parents=True, exist_ok=True)

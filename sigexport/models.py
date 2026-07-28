@@ -36,6 +36,9 @@ class RawMessage:
     sticker: dict[str, Any] | None
     quote: dict[str, Any] | None
 
+    deleted: bool = False
+    has_visual_media: bool = False
+
     def get_ts(self: RawMessage) -> int:
         if self.sent_at and self.server_timestamp:
             if self.server_timestamp < self.sent_at:
@@ -148,6 +151,9 @@ def is_video(p: str) -> bool:
 class Attachment:
     name: str
     path: str
+    # set when the attachment existed but wasn't included in the export
+    # (e.g. --no-attachments, missing source file, failed decrypt)
+    missing_kind: str | None = None
 
 
 @dataclass
@@ -159,9 +165,14 @@ class Message:
     sticker: Sticker | None
     reactions: list[Reaction]
     attachments: list[Attachment]
+    deleted: bool = False
+    call: bool = False
+    missed: bool = False
 
     def to_md(self: Message) -> str:
         date_str = self.date.strftime("%Y-%m-%d %H:%M:%S")
+        if self.deleted:
+            return f"[{date_str}] {self.sender}: (This message was deleted)\n"
         body = self.body
 
         if len(self.reactions) > 0:
@@ -176,6 +187,9 @@ class Message:
                 body = body + "\n(( " + self.sticker.label + " ))"
 
         for att in self.attachments:
+            if att.missing_kind is not None:
+                body += f"({att.missing_kind} not exported)  "
+                continue
             if is_image(att.path):
                 body += "!"
             body += f"[{att.name}](./{att.path})  "

@@ -222,6 +222,10 @@ def fix_names(contacts: models.Contacts) -> models.Contacts:
     Iteration is in a stable order (serviceId, then id) so the numeric suffixes
     are deterministic across exports and a contact keeps the same folder from
     run to run (important for ``--old`` merges).
+
+    The de-duplication suffix is only applied to ``name`` (the folder). The
+    conversation-facing ``display`` keeps the un-suffixed base, so two "Alice"s
+    live in Alice/ and Alice2/ but both still read "Alice" inside the export.
     """
     used: set[str] = set()
     for key in sorted(contacts, key=lambda k: (contacts[k].serviceId or "", k)):
@@ -239,6 +243,7 @@ def fix_names(contacts: models.Contacts) -> models.Contacts:
             name = f"{base}{suffix}"
             suffix += 1
         used.add(name)
+        item.display = base
         item.name = name
 
     return contacts

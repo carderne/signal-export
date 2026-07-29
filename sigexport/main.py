@@ -203,6 +203,9 @@ def main(
         if not name:
             name = "None"
 
+        # `name` is the (unique) folder; `title` is the human name for display
+        title = contacts[key].display or name
+
         (dest / name).mkdir(parents=True, exist_ok=True)
         md_path = dest / name / "chat.md"
         js_path = dest / name / "data.json"
@@ -223,7 +226,7 @@ def main(
                     print(msg.dict_str(), file=js_f)
             if ht_f:
                 ht = html.create_html(
-                    name=name,
+                    name=title,
                     messages=messages,
                     msgs_per_page=paginate,
                     media_dir=dest / name,

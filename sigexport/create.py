@@ -200,6 +200,7 @@ def create_message(
         call=is_call,
         missed=missed_call,
         id=msg.id,
+        disappearing=msg.disappearing,
     )
 
 

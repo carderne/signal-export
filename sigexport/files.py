@@ -204,6 +204,18 @@ def copy_attachments(
                         continue
                     src_path = src_root / att_path
                     dst_path = dst_root / att["fileName"]
+                    # Skip attachments already present (e.g. an --update re-run):
+                    # the filename is deterministic, so an existing file of the
+                    # expected size is the same attachment. A size mismatch (a
+                    # partial write from an interrupted run) falls through and is
+                    # rewritten.
+                    if dst_path.exists():
+                        try:
+                            expected = int(att.get("size") or 0)
+                        except (TypeError, ValueError):
+                            expected = 0
+                        if not expected or dst_path.stat().st_size == expected:
+                            continue
                     if int(att.get("version", 0)) >= 2:
                         try:
                             decrypt_attachment(att, src_path, dst_path)

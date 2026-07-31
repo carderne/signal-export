@@ -38,6 +38,7 @@ class RawMessage:
 
     deleted: bool = False
     has_visual_media: bool = False
+    disappearing: bool = False
 
     def get_ts(self: RawMessage) -> int:
         if self.sent_at and self.server_timestamp:
@@ -176,6 +177,8 @@ class Message:
     missed: bool = False
     # Signal's stable message id, used to de-duplicate on `--update`
     id: str = ""
+    # message had a disappearing timer (only captured with --include-disappearing)
+    disappearing: bool = False
 
     def to_md(self: Message) -> str:
         date_str = self.date.strftime("%Y-%m-%d %H:%M:%S")
@@ -235,6 +238,7 @@ class Message:
             call=d.get("call", False),
             missed=d.get("missed", False),
             id=d.get("id", ""),
+            disappearing=d.get("disappearing", False),
         )
 
 

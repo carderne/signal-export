@@ -6,6 +6,7 @@ from pathlib import Path
 from typer import Argument, Context, Exit, Option, colors, run, secho
 
 from sigexport import create, data, files, html, logging, merge, utils
+from sigexport import update as update_mod
 from sigexport.export_channel_metadata import export_channel_metadata
 
 OptionalPath = Path | None
@@ -62,6 +63,12 @@ def main(
         "--overwrite/--no-overwrite",
         help="Overwrite contents of output directory if it exists",
     ),
+    update: bool = Option(
+        False,
+        "--update",
+        help="Merge this export into an existing one at DEST, keyed on message "
+        "id (incremental archive). Regenerates each chat from its data.json.",
+    ),
     yes: bool = Option(
         False,
         "--yes",
@@ -107,6 +114,15 @@ def main(
         # secho("Error: Missing argument 'DEST'", fg=colors.RED)
         raise Exit(code=1)
 
+    if update and old:
+        secho("Error: --update and --old can't be used together.", fg=colors.RED)
+        raise Exit(code=1)
+    if update and not json_output:
+        secho(
+            "--update uses data.json as its store; enabling --json.", fg=colors.YELLOW
+        )
+        json_output = True
+
     if source:
         source_dir = Path(source).expanduser().absolute()
     else:
@@ -151,7 +167,11 @@ def main(
         raise Exit()
 
     dest = Path(dest).expanduser()
-    if not dest.is_dir():
+    if update:
+        # the archive is the destination: create it on the first run, and merge
+        # into it on subsequent runs
+        dest.mkdir(parents=True, exist_ok=True)
+    elif not dest.is_dir():
         dest.mkdir(parents=True, exist_ok=True)
     elif overwrite:
         utils.safe_delete(dest, yes=yes)
@@ -187,7 +207,10 @@ def main(
     secho("Creating output files")
     chat_dict = create.create_chats(convos, contacts)
 
-    if old:
+    if update:
+        secho("Merging into existing export at destination")
+        chat_dict = update_mod.merge_into_archive(chat_dict, contacts, dest)
+    elif old:
         secho(f"Merging old at {old} into output directory")
         secho("No existing files will be deleted or overwritten!")
         chat_dict = merge.merge_with_old(chat_dict, contacts, dest, Path(old))
@@ -211,10 +234,13 @@ def main(
         js_path = dest / name / "data.json"
         ht_path = dest / name / "index.html"
 
-        md_f = md_path.open("a", encoding="utf-8")
+        # --update regenerates each chat from the merged set, so rewrite rather
+        # than append (which would duplicate the already-archived messages)
+        write_mode = "w" if update else "a"
+        md_f = md_path.open(write_mode, encoding="utf-8")
         js_f = None
         if json_output:
-            js_f = js_path.open("a", encoding="utf-8")
+            js_f = js_path.open(write_mode, encoding="utf-8")
         ht_f = None
         if html_output:
             ht_f = ht_path.open("w", encoding="utf-8")

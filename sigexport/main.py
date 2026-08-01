@@ -1,11 +1,13 @@
 """Main script for sigexport."""
 
+import os
 from datetime import datetime
 from pathlib import Path
 
 from typer import Argument, Context, Exit, Option, colors, run, secho
 
 from sigexport import create, data, files, html, logging, merge, utils
+from sigexport import update as update_mod
 from sigexport.export_channel_metadata import export_channel_metadata
 
 OptionalPath = Path | None
@@ -47,6 +49,18 @@ def main(
         "--include-disappearing",
         help="Whether to include disappearing messages",
     ),
+    keep_disappearing: bool = Option(
+        False,
+        "--keep-disappearing/--no-keep-disappearing",
+        help="On --update, keep archived disappearing messages even after they "
+        "expire from Signal (default: forget them once gone)",
+    ),
+    forget_disappearing: bool = Option(
+        False,
+        "--forget-disappearing/--no-forget-disappearing",
+        help="On --update, drop all disappearing messages from the chats in "
+        "this run (sanitise an archive)",
+    ),
     start_date: str | None = Option(
         None,
         "--start",
@@ -61,6 +75,12 @@ def main(
         False,
         "--overwrite/--no-overwrite",
         help="Overwrite contents of output directory if it exists",
+    ),
+    update: bool = Option(
+        False,
+        "--update/--no-update",
+        help="Merge this export into an existing one at DEST, keyed on message "
+        "id (incremental archive). Regenerates each chat from its data.json.",
     ),
     yes: bool = Option(
         False,
@@ -107,6 +127,26 @@ def main(
         # secho("Error: Missing argument 'DEST'", fg=colors.RED)
         raise Exit(code=1)
 
+    if update and old:
+        secho("Error: --update and --old can't be used together.", fg=colors.RED)
+        raise Exit(code=1)
+    if keep_disappearing and forget_disappearing:
+        secho(
+            "Error: --keep-disappearing and --forget-disappearing conflict.",
+            fg=colors.RED,
+        )
+        raise Exit(code=1)
+    if (keep_disappearing or forget_disappearing) and not update:
+        secho(
+            "Note: --keep/--forget-disappearing only apply with --update.",
+            fg=colors.YELLOW,
+        )
+    if update and not json_output:
+        secho(
+            "--update uses data.json as its store; enabling --json.", fg=colors.YELLOW
+        )
+        json_output = True
+
     if source:
         source_dir = Path(source).expanduser().absolute()
     else:
@@ -151,14 +191,21 @@ def main(
         raise Exit()
 
     dest = Path(dest).expanduser()
-    if not dest.is_dir():
+    if update:
+        # the archive is the destination: create it on the first run, and merge
+        # into it on subsequent runs
+        dest.mkdir(parents=True, exist_ok=True)
+    elif not dest.is_dir():
         dest.mkdir(parents=True, exist_ok=True)
     elif overwrite:
         utils.safe_delete(dest, yes=yes)
         dest.mkdir(parents=True, exist_ok=True)
     else:
         secho(
-            f"Output folder '{dest}' already exists, didn't do anything!", fg=colors.RED
+            f"Output folder '{dest}' already exists, didn't do anything! "
+            "Use --update to merge new messages into it, or --overwrite to "
+            "replace it.",
+            fg=colors.RED,
         )
         raise Exit()
 
@@ -167,7 +214,21 @@ def main(
     if owner is not None:
         owner.name = "Note to Self"
 
-    contacts = utils.fix_names(contacts)
+    # On --update, keep known conversations in their existing folders even if
+    # their display name changed, so a rename doesn't orphan the archive.
+    pins = None
+    if update:
+        if update_mod.legacy_without_manifest(dest):
+            secho(
+                "Warning: this export has no manifest, so --update is matching "
+                "chats by folder name. If you've changed naming flags (e.g. "
+                "--nicknames) since it was created, some chats may be duplicated "
+                "rather than merged. Nothing is deleted; consider --overwrite for "
+                "a clean archive.",
+                fg=colors.YELLOW,
+            )
+        pins = update_mod.pinned_folders(dest, contacts)
+    contacts = utils.fix_names(contacts, pinned=pins)
 
     if stickers:
         secho("Exporting stickers")
@@ -187,10 +248,25 @@ def main(
     secho("Creating output files")
     chat_dict = create.create_chats(convos, contacts)
 
-    if old:
+    if update:
+        secho("Merging into existing export at destination")
+        chat_dict = update_mod.merge_into_archive(
+            chat_dict,
+            contacts,
+            dest,
+            reconcile_disappearing=include_disappearing,
+            keep_disappearing=keep_disappearing,
+            forget_disappearing=forget_disappearing,
+        )
+    elif old:
         secho(f"Merging old at {old} into output directory")
         secho("No existing files will be deleted or overwritten!")
         chat_dict = merge.merge_with_old(chat_dict, contacts, dest, Path(old))
+
+    # Record the conversation -> folder map whenever we write the JSON store, so
+    # a later --update can match chats by stable id regardless of naming flags.
+    if json_output:
+        update_mod.save_manifest(dest, contacts, chat_dict.keys())
 
     if paginate <= 0:
         paginate = int(1e20)
@@ -211,13 +287,23 @@ def main(
         js_path = dest / name / "data.json"
         ht_path = dest / name / "index.html"
 
-        md_f = md_path.open("a", encoding="utf-8")
+        # --update regenerates each chat from the merged set, so rewrite rather
+        # than append (which would duplicate the already-archived messages).
+        # Write to temp files and atomically swap them in, so an interrupted
+        # run can't truncate or corrupt the existing archive.
+        write_mode = "w" if update else "a"
+        suffix = ".tmp" if update else ""
+        md_w = md_path.with_name(md_path.name + suffix)
+        js_w = js_path.with_name(js_path.name + suffix)
+        ht_w = ht_path.with_name(ht_path.name + suffix)
+
+        md_f = md_w.open(write_mode, encoding="utf-8")
         js_f = None
         if json_output:
-            js_f = js_path.open("a", encoding="utf-8")
+            js_f = js_w.open(write_mode, encoding="utf-8")
         ht_f = None
         if html_output:
-            ht_f = ht_path.open("w", encoding="utf-8")
+            ht_f = ht_w.open("w", encoding="utf-8")
 
         try:
             for msg in messages:
@@ -238,6 +324,13 @@ def main(
                 js_f.close()
             if ht_f:
                 ht_f.close()
+
+        if update:
+            os.replace(md_w, md_path)
+            if json_output:
+                os.replace(js_w, js_path)
+            if html_output:
+                os.replace(ht_w, ht_path)
 
     secho("Done!", fg=colors.GREEN)
 

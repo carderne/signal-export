@@ -119,3 +119,22 @@ def test_one_to_one_sender_uses_display() -> None:
     # a 1:1 message in conversation "b" (the de-duplicated Alice2)
     msg = create.create_message(raw(conversation_id="b"), "Alice2", False, contacts)
     assert msg.sender == "Alice"
+
+
+def test_pinned_folder_survives_a_rename() -> None:
+    """A renamed contact keeps its archive folder but shows the new name."""
+    contacts = {"a": contact("a", "Bob", "sid-a")}  # was "Alice" last export
+    utils.fix_names(contacts, pinned={"a": "Alice"})
+    assert contacts["a"].name == "Alice"  # folder unchanged
+    assert contacts["a"].display == "Bob"  # display follows the rename
+
+
+def test_new_contacts_avoid_pinned_folders() -> None:
+    """A new "Alice" can't take a folder pinned to someone else."""
+    contacts = {
+        "a": contact("a", "Alice", "sid-a"),  # pinned to Alice
+        "b": contact("b", "Alice", "sid-b"),  # new, must not clash
+    }
+    utils.fix_names(contacts, pinned={"a": "Alice"})
+    assert contacts["a"].name == "Alice"
+    assert contacts["b"].name == "Alice2"

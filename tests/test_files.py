@@ -94,6 +94,82 @@ def test_copy_attachments_sanitizes_filesystem_reserved_characters(
     assert safe_name in rendered
 
 
+CONTACT = {
+    "contact": models.Contact(
+        id="contact",
+        serviceId="service",
+        name="Alice",
+        number="",
+        profile_name="",
+        is_group=False,
+        members=None,
+    )
+}
+
+
+def _message_with_attachment() -> models.RawMessage:
+    att = {
+        "fileName": "photo.bin",
+        "contentType": "application/octet-stream",
+        "path": "ab/cd",
+        "version": "0",
+        "size": str(len(b"attachment data")),
+    }
+    return models.RawMessage(
+        conversation_id="contact",
+        id="message",
+        body="",
+        type="incoming",
+        source=None,
+        timestamp=1,
+        sent_at=None,
+        server_timestamp=None,
+        has_attachments=True,
+        attachments=[att],
+        read_status=None,
+        seen_status=None,
+        call_history=None,
+        reactions=[],
+        sticker=None,
+        quote=None,
+    )
+
+
+def test_copy_attachments_skips_already_present(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An --update re-run must not re-copy attachments already on disk."""
+    source = tmp_path / "source"
+    attachment_path = source / "attachments.noindex" / "ab" / "cd"
+    attachment_path.parent.mkdir(parents=True)
+    attachment_path.write_bytes(b"attachment data")
+    destination = tmp_path / "export"
+
+    copies: list[object] = []
+    real_copy = files.shutil.copy2
+    monkeypatch.setattr(
+        files.shutil,
+        "copy2",
+        lambda a, b, *x, **k: (copies.append(b), real_copy(a, b, *x, **k))[1],
+    )
+
+    def run() -> None:
+        # fresh RawMessage each run, as fetch_data would produce
+        with dbapi2.connect(":memory:") as connection:
+            files.copy_attachments(
+                source,
+                destination,
+                {"contact": [_message_with_attachment()]},
+                CONTACT,
+                connection.cursor(),
+            )
+
+    run()
+    assert len(copies) == 1  # first run copies
+    run()
+    assert len(copies) == 1  # second run finds it present and skips
+
+
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
 
 

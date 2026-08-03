@@ -119,3 +119,31 @@ def test_one_to_one_sender_uses_display() -> None:
     # a 1:1 message in conversation "b" (the de-duplicated Alice2)
     msg = create.create_message(raw(conversation_id="b"), "Alice2", False, contacts)
     assert msg.sender == "Alice"
+
+
+def test_own_reactions_show_as_me_not_note_to_self() -> None:
+    """Your own reactions must read 'Me', not the owner folder's 'Note to Self'."""
+    owner = contact("me", "Note to Self", "sid-me")
+    owner.is_owner = True
+    owner.display = "NotetoSelf"  # as fix_names would set it
+    contacts = {"me": owner, "c": contact("c", "Alice", "sid-a")}
+    contacts["c"].display = "Alice"
+    msg = create.create_message(
+        raw(conversation_id="c", reactions=[{"fromId": "me", "emoji": "👍"}]),
+        "Alice",
+        False,
+        contacts,
+    )
+    assert msg.reactions == [models.Reaction("Me", "👍")]
+
+
+def test_other_peoples_reactions_use_their_display() -> None:
+    contacts = {"c": contact("c", "Alice", "sid-a")}
+    contacts["c"].display = "Alice"
+    msg = create.create_message(
+        raw(conversation_id="c", reactions=[{"fromId": "c", "emoji": "❤️"}]),
+        "Alice",
+        False,
+        contacts,
+    )
+    assert msg.reactions == [models.Reaction("Alice", "❤️")]

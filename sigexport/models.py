@@ -103,6 +103,8 @@ class Contact:
     # reactions, HTML title). Unlike `name`, it has no folder-uniqueness
     # suffix, so two "Alice"s live in Alice/ and Alice2/ but both read "Alice".
     display: str | None = None
+    # the db owner (you): shown as "Me", so reactions don't read "Note to Self"
+    is_owner: bool = False
 
 
 Contacts = dict[str, Contact]

@@ -151,9 +151,13 @@ def create_message(
         for r in msg.reactions:
             try:
                 reactor = contacts[r["fromId"]]
-                reactions.append(
-                    models.Reaction(reactor.display or reactor.name, r["emoji"])
-                )
+                # your own reactions read "Me", matching how your messages show,
+                # rather than the owner conversation's "Note to Self" folder name
+                if reactor.is_owner:
+                    reactor_name = "Me"
+                else:
+                    reactor_name = reactor.display or reactor.name
+                reactions.append(models.Reaction(reactor_name, r["emoji"]))
             except KeyError:
                 log(
                     f"\t\tReaction fromId not found in contacts: [{date}] {sender}: {r}"

@@ -164,8 +164,10 @@ def main(
 
     # The conversation with your own account is Signal's "Note to Self"; it
     # usually has no name and would otherwise land in the shared "None" folder.
+    # Mark it so your own reactions read "Me" rather than the folder name.
     if owner is not None:
         owner.name = "Note to Self"
+        owner.is_owner = True
 
     contacts = utils.fix_names(contacts)
 

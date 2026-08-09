@@ -396,7 +396,8 @@ label > img {
 
 audio {
     display: block;
-    width: min(320px, 100%);
+    width: 320px;
+    max-width: 100%;
     margin-top: 0.4rem;
 }
 

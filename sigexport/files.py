@@ -20,6 +20,21 @@ MAC_KEY_SIZE = 32
 MAC_SIZE = hashlib.sha256().digest_size
 
 
+def _json_default(obj: object) -> str:
+    """Fallback JSON serializer for values sqlite returns as bytes.
+
+    Signal stores some sticker-pack columns (e.g. ``storageID`` and
+    ``storageUnknownFields``) as BLOBs, which ``json.dumps`` cannot encode.
+    Represent them as base64 so the sticker export succeeds instead of raising
+    ``TypeError: Object of type bytes is not JSON serializable``.
+    """
+    if isinstance(obj, bytes):
+        return base64.b64encode(obj).decode("ascii")
+    raise TypeError(
+        f"Object of type {type(obj).__name__} is not JSON serializable"
+    )
+
+
 def decrypt_attachment(
     att: dict[str, str], src_path: Path, dst_path: Path, detect_file_type: bool = False
 ) -> None:
@@ -323,7 +338,7 @@ def copy_stickers(
             sticker_packs[pack_id]["stickers"].append(sticker)
         js_path = pck_path / "data.json"
         js_f = js_path.open("a", encoding="utf-8")
-        js_str = json.dumps(sticker_packs[pack_id])
+        js_str = json.dumps(sticker_packs[pack_id], default=_json_default)
         if js_f:
             print(js_str, file=js_f)
 

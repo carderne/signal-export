@@ -1,3 +1,5 @@
+import base64
+import json
 from pathlib import Path
 
 from sigexport import create, files, models
@@ -67,6 +69,26 @@ def test_present_sticker_file_is_linked(tmp_path: Path) -> None:
 
     assert sticker["extension"] == "webp"
     assert "[🐺](../exported_stickers/pack/102.webp)" in render(message)
+
+
+def test_json_default_encodes_bytes() -> None:
+    raw = b"\x00\x01\x02signal"
+    assert files._json_default(raw) == base64.b64encode(raw).decode("ascii")
+
+
+def test_sticker_pack_with_blob_fields_is_serializable() -> None:
+    """Signal stores fields like storageID as BLOBs; dumping a pack that
+    contains bytes must not raise (regression for the sticker export crash)."""
+    pack = {
+        "id": "pack",
+        "title": "Wolves",
+        "storageID": b"\x00\xffbytes",
+        "storageUnknownFields": b"\x10\x20",
+        "stickers": [],
+    }
+    dumped = json.dumps(pack, default=files._json_default)
+    loaded = json.loads(dumped)
+    assert loaded["storageID"] == base64.b64encode(b"\x00\xffbytes").decode("ascii")
 
 
 def test_sticker_without_emoji_still_gets_a_label() -> None:

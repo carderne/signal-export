@@ -73,7 +73,10 @@ meta = """
 </div>
 """
 
-quote = "<div class=quote>{text}</div>"
+quote = (
+    "<div class=quote>"
+    "<span class=copytext aria-hidden=true>&gt;&nbsp;</span>{text}</div>"
+)
 
 deleted = "<em>This message was deleted</em>"
 
@@ -98,6 +101,7 @@ reaction = "<span class=reaction>{emoji}<span class=who>{name}</span></span>"
 
 audio = """
 <audio controls preload=metadata src="{src}"></audio>
+<span class=copytext aria-hidden=true>(audio)</span>
 """
 
 figure = """
@@ -105,6 +109,7 @@ figure = """
     <label for="{fid}">
         <img loading="lazy" src="{src}" alt="{alt}">
     </label>
+    <span class=copytext aria-hidden=true>{note}</span>
     <input class="modal-state" id="{fid}" type="checkbox">
     <div class="modal">
         <label for="{fid}" class="modal-content">
@@ -116,6 +121,7 @@ figure = """
 
 video = """
 <video controls preload=metadata playsinline src="{src}"></video>
+<span class=copytext aria-hidden=true>(video)</span>
 """
 
 file_link = """

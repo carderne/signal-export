@@ -204,6 +204,7 @@ def fetch_data(
                 quote=jsonLoaded.get("quote"),
                 deleted=bool(jsonLoaded.get("deletedForEveryone")),
                 has_visual_media=bool(jsonLoaded.get("hasVisualMediaAttachments")),
+                edits=jsonLoaded.get("editHistory") or [],
             )
 
             convos[cid].append(con)

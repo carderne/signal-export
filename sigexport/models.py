@@ -4,7 +4,7 @@ import json
 import os
 import re
 from collections import namedtuple
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -38,6 +38,8 @@ class RawMessage:
 
     deleted: bool = False
     has_visual_media: bool = False
+    # Signal's editHistory (newest first): each entry has body + timestamp
+    edits: list[dict[str, Any]] = field(default_factory=list)
 
     def get_ts(self: RawMessage) -> int:
         if self.sent_at and self.server_timestamp:
@@ -163,6 +165,14 @@ class Attachment:
 
 
 @dataclass
+class Edit:
+    """One earlier version of an edited message."""
+
+    date: datetime
+    body: str
+
+
+@dataclass
 class Message:
     date: datetime
     sender: str
@@ -174,6 +184,9 @@ class Message:
     deleted: bool = False
     call: bool = False
     missed: bool = False
+    # earlier versions of an edited message, oldest first ([] if never edited).
+    # `body` is always the current version.
+    edits: list[Edit] = field(default_factory=list)
 
     def to_md(self: Message) -> str:
         date_str = self.date.strftime("%Y-%m-%d %H:%M:%S")
@@ -209,6 +222,8 @@ class Message:
     def dict(self: Message) -> JsonDict:
         msg_dict = asdict(self)
         msg_dict["date"] = msg_dict["date"].isoformat()
+        for edit in msg_dict["edits"]:
+            edit["date"] = edit["date"].isoformat()
         return msg_dict
 
     def dict_str(self: Message) -> str:

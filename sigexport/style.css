@@ -364,6 +364,41 @@ body:not(:has(.page:target)) main > .page:first-child {
     margin-top: 0.4rem;
 }
 
+/* edit history: a collapsed disclosure, so the prior versions aren't copied */
+.edits {
+    margin-top: 0.3rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+.edits > summary {
+    cursor: pointer;
+    width: fit-content;
+    list-style: none;
+}
+
+.edits > summary::before {
+    content: "\270E\FE0F"; /* pencil */
+    margin-right: 0.3rem;
+}
+
+.edits .revision {
+    margin-top: 0.4rem;
+    padding-left: 0.6rem;
+    border-left: 2px solid var(--border);
+}
+
+.edits .revision-time {
+    display: block;
+    margin-bottom: 0.1rem;
+    opacity: 0.8;
+    font-variant-numeric: tabular-nums;
+}
+
+.edits .revision-body {
+    overflow-wrap: anywhere;
+}
+
 .reaction {
     padding: 0 0.45rem;
     border: 1px solid var(--border);

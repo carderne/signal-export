@@ -492,7 +492,7 @@ requires-dist = [
     { name = "markdown", specifier = ">=3.8.1,<4" },
     { name = "pycryptodome", specifier = "~=3.20" },
     { name = "sqlcipher3-wheels", specifier = ">=0.5.4" },
-    { name = "typer", specifier = ">=0.12.1" },
+    { name = "typer", specifier = ">=0.16.0" },
 ]
 
 [package.metadata.requires-dev]

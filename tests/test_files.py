@@ -94,6 +94,72 @@ def test_copy_attachments_sanitizes_filesystem_reserved_characters(
     assert safe_name in rendered
 
 
+def _timestamp_message() -> models.RawMessage:
+    return models.RawMessage(
+        conversation_id="contact",
+        id="message",
+        body="",
+        type="incoming",
+        source=None,
+        timestamp=None,
+        sent_at=1_600_000_000_000,  # a specific past moment, in ms
+        server_timestamp=None,
+        has_attachments=True,
+        attachments=[
+            {
+                "fileName": "photo.jpg",
+                "contentType": "image/jpeg",
+                "path": "ab/cd",
+                "version": "0",
+            }
+        ],
+        read_status=None,
+        seen_status=None,
+        call_history=None,
+        reactions=[],
+        sticker=None,
+        quote=None,
+    )
+
+
+CONTACT = {
+    "contact": models.Contact(
+        id="contact",
+        serviceId="service",
+        name="Alice",
+        number="",
+        profile_name="",
+        is_group=False,
+        members=None,
+    )
+}
+
+
+def _copy(tmp_path: Path, message: models.RawMessage, **kwargs: object) -> Path:
+    source = tmp_path / "source"
+    (source / "attachments.noindex" / "ab").mkdir(parents=True)
+    (source / "attachments.noindex" / "ab" / "cd").write_bytes(b"data")
+    destination = tmp_path / "export"
+    with dbapi2.connect(":memory:") as connection:
+        files.copy_attachments(
+            source, destination, {"contact": [message]}, CONTACT, connection.cursor(), **kwargs
+        )
+    # copy_attachments renames the file in place (date prefix + sanitising)
+    fname = message.attachments[0]["fileName"]
+    return destination / "Alice" / "media" / fname
+
+
+def test_message_timestamp_written_to_media_mtime_by_default(tmp_path: Path) -> None:
+    out = _copy(tmp_path, _timestamp_message())  # on by default
+    assert out.stat().st_mtime == 1_600_000_000  # sent_at in seconds
+
+
+def test_media_mtime_left_alone_when_disabled(tmp_path: Path) -> None:
+    out = _copy(tmp_path, _timestamp_message(), set_timestamps=False)
+    # keeps the export/copy time, not the (much older) message time
+    assert out.stat().st_mtime > 1_600_000_000
+
+
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
 
 

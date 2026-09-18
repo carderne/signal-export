@@ -114,7 +114,9 @@ def make_body(msg: models.Message, fid: str, media_dir: Path | None) -> str:
         elif not _exported(media_dir, path):
             temp = _missing_attachment(_kind_from_path(path))
         elif models.is_image(path):
-            temp = templates.figure.format(fid=f"{fid}-{i}", src=src, alt=alt)
+            temp = templates.figure.format(
+                fid=f"{fid}-{i}", src=src, alt=alt, note="(image)"
+            )
         elif models.is_audio(path):
             temp = templates.audio.format(src=src)
         elif models.is_video(path):
@@ -128,7 +130,10 @@ def make_body(msg: models.Message, fid: str, media_dir: Path | None) -> str:
         sticker_path = msg.sticker.get_path()
         if sticker_path:
             temp = templates.figure.format(
-                fid=f"{fid}-sticker", src=f"../{sticker_path}", alt=label
+                fid=f"{fid}-sticker",
+                src=f"../{sticker_path}",
+                alt=label,
+                note="(sticker)",
             )
         else:
             temp = f"(( {label} ))"

@@ -57,6 +57,21 @@ a:hover {
     text-decoration: underline;
 }
 
+/* Hidden on screen but still selected/copied, so pasting a message keeps a
+   plain-text marker (e.g. "> " before a quote, "(image)" for a picture).
+   aria-hidden on these spans keeps them out of the screen-reader stream. */
+.copytext {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+}
+
 /* ---------- header ---------- */
 
 .topbar {

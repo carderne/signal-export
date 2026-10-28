@@ -2,10 +2,6 @@
 
 [![PyPI version](https://badge.fury.io/py/signal-export.svg)](https://pypi.org/project/signal-export/)
 
-> [!Note]
-> ⚠️Because the latest versions of Signal Desktop protect the database encryption key, so decrypting involves some extra steps.
-> Good luck.
-
 Export chats from the [Signal](https://www.signal.org/) [Desktop app](https://www.signal.org/download/) to Markdown and HTML files with attachments. Each chat is exported as an individual .md/.html file and the attachments for each are stored in a separate folder. Attachments are linked from the Markdown files and displayed in the HTML (pictures, videos, voice notes).
 
 Currently this seems to be the only way to get chat history out of Signal!
@@ -25,6 +21,13 @@ An export for a group conversation looks as follows:
 Images are attached inline with `![name](path)` while other attachments (voice notes, videos, documents) are included as links like `[name](path)` so a click will take you to the file.
 
 This is converted to HTML at the end so it can be opened with any web browser. The HTML export is styled as a chat view with grouped messages, day dividers, reactions, and an image lightbox. It follows your browser/OS light or dark preference by default, and a switcher in the top bar lets you pin light or dark (remembered per browser).
+
+## Usage with `uv`
+If you use [uv](https://docs.astral.sh/uv/), you can run signal-export without needing to install it:
+```bash
+uvx --from signal-export sigexport
+```
+
 
 ## 🐧 Installation
 

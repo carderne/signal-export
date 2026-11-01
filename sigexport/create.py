@@ -199,6 +199,8 @@ def create_message(
         deleted=msg.deleted,
         call=is_call,
         missed=missed_call,
+        id=msg.id,
+        disappearing=msg.disappearing,
     )
 
 

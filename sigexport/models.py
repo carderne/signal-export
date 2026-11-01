@@ -38,6 +38,7 @@ class RawMessage:
 
     deleted: bool = False
     has_visual_media: bool = False
+    disappearing: bool = False
 
     def get_ts(self: RawMessage) -> int:
         if self.sent_at and self.server_timestamp:
@@ -174,6 +175,10 @@ class Message:
     deleted: bool = False
     call: bool = False
     missed: bool = False
+    # Signal's stable message id, used to de-duplicate on `--update`
+    id: str = ""
+    # message had a disappearing timer (only captured with --include-disappearing)
+    disappearing: bool = False
 
     def to_md(self: Message) -> str:
         date_str = self.date.strftime("%Y-%m-%d %H:%M:%S")
@@ -213,6 +218,28 @@ class Message:
 
     def dict_str(self: Message) -> str:
         return json.dumps(self.dict(), ensure_ascii=False)
+
+    @staticmethod
+    def from_dict(d: JsonDict) -> Message:
+        """Reconstruct a Message from a `data.json` line (see `dict`)."""
+        sticker = Sticker(**d["sticker"]) if d.get("sticker") else None
+        # reactions serialise as [name, emoji] pairs (namedtuple -> JSON array)
+        reactions = [Reaction(r[0], r[1]) for r in d.get("reactions", [])]
+        attachments = [Attachment(**a) for a in d.get("attachments", [])]
+        return Message(
+            date=datetime.fromisoformat(d["date"]),
+            sender=d["sender"],
+            body=d["body"],
+            quote=d.get("quote", ""),
+            sticker=sticker,
+            reactions=reactions,
+            attachments=attachments,
+            deleted=d.get("deleted", False),
+            call=d.get("call", False),
+            missed=d.get("missed", False),
+            id=d.get("id", ""),
+            disappearing=d.get("disappearing", False),
+        )
 
 
 Chats = dict[str, list[Message]]

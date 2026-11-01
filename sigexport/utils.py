@@ -211,7 +211,9 @@ def safe_delete(dest: Path, yes: bool = False) -> None:
     shutil.rmtree(dest)
 
 
-def fix_names(contacts: models.Contacts) -> models.Contacts:
+def fix_names(
+    contacts: models.Contacts, pinned: dict[str, str] | None = None
+) -> models.Contacts:
     """Convert contact names to filesystem-friendly, de-duplicating collisions.
 
     Every contact ends up with a non-empty, unique name so each gets its own
@@ -226,8 +228,13 @@ def fix_names(contacts: models.Contacts) -> models.Contacts:
     The de-duplication suffix is only applied to ``name`` (the folder). The
     conversation-facing ``display`` keeps the un-suffixed base, so two "Alice"s
     live in Alice/ and Alice2/ but both still read "Alice" inside the export.
+
+    ``pinned`` maps a contact id to a folder it must keep (from an archive
+    manifest, for ``--update``). Pinned folders are reserved up front so a
+    renamed contact keeps its existing folder even though its display updates.
     """
-    used: set[str] = set()
+    pinned = pinned or {}
+    used: set[str] = set(pinned.values())
     for key in sorted(contacts, key=lambda k: (contacts[k].serviceId or "", k)):
         item = contacts[key]
         if item.name is None:
@@ -237,13 +244,18 @@ def fix_names(contacts: models.Contacts) -> models.Contacts:
             if base == "":
                 base = "unnamed"
 
+        item.display = base
+
+        if key in pinned:
+            item.name = pinned[key]
+            continue
+
         name = base
         suffix = 2
         while name in used:
             name = f"{base}{suffix}"
             suffix += 1
         used.add(name)
-        item.display = base
         item.name = name
 
     return contacts

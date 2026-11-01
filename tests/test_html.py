@@ -179,3 +179,31 @@ def test_sentinel_attachment_renders_placeholder() -> None:
     out = html.create_html("Chat", [msg(body="here", attachments=[att])])
     assert "Media not exported" in out
     assert "<img" not in out
+
+
+def test_quote_has_copy_only_prefix() -> None:
+    """Copying a reply should paste the quote with a '> ' marker."""
+    out = html.create_html("Chat", [msg(body="ok", quote="\n\n> earlier\n\n")])
+    assert 'class="copytext"' in out
+    assert "&gt;" in out
+
+
+def test_image_has_copy_only_marker() -> None:
+    att = models.Attachment(name="cat.jpg", path="media/cat.jpg")
+    out = html.create_html("Chat", [msg(attachments=[att])])
+    assert 'class="copytext"' in out
+    assert "(image)" in out
+
+
+def test_audio_and_video_have_copy_only_markers() -> None:
+    audio = models.Attachment(name="v.m4a", path="media/v.m4a")
+    video = models.Attachment(name="clip.mp4", path="media/clip.mp4")
+    out = html.create_html("Chat", [msg(attachments=[audio, video])])
+    assert "(audio)" in out
+    assert "(video)" in out
+
+
+def test_sticker_has_copy_only_marker() -> None:
+    sticker = models.Sticker(id="1", packId="p", packKey="k", emoji="🦊", extension="webp")
+    out = html.create_html("Chat", [msg(sticker=sticker)])
+    assert "(sticker)" in out

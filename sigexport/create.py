@@ -107,6 +107,20 @@ def create_message(
     else:
         body = msg.body or ""
 
+    # An edited message keeps its versions newest-first in editHistory; the
+    # current text is editHistory[0] (authoritative, so we show the latest even
+    # if the body column were stale). Keep the earlier versions, oldest first.
+    message_edits: list[models.Edit] = []
+    if not is_call and len(msg.edits) >= 2:
+        body = msg.edits[0].get("body") or ""
+        message_edits = [
+            models.Edit(
+                date=utils.dt_from_ts(e.get("timestamp") or 0),
+                body=e.get("body") or "",
+            )
+            for e in reversed(msg.edits[1:])
+        ]
+
     body = body.replace("`", "")  # stop md code sections forming
     body += "  "  # so that markdown newlines
 
@@ -199,6 +213,7 @@ def create_message(
         deleted=msg.deleted,
         call=is_call,
         missed=missed_call,
+        edits=message_edits,
     )
 
 

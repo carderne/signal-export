@@ -137,6 +137,28 @@ def make_body(msg: models.Message, fid: str, media_dir: Path | None) -> str:
     return str(soup)
 
 
+def make_edits(msg: models.Message) -> str:
+    """Collapsed disclosure listing a message's earlier versions (oldest first).
+
+    Collapsed <details> content isn't rendered, so it isn't copied: selecting
+    the message yields the current text only.
+    """
+    if not msg.edits:
+        return ""
+    revisions = "".join(
+        templates.edit_revision.format(
+            iso=e.date.isoformat(),
+            date=e.date.strftime("%Y-%m-%d %H:%M:%S"),
+            when=e.date.time().replace(microsecond=0).isoformat(),
+            body=escape(e.body).replace("\n", "<br>"),
+        )
+        for e in msg.edits
+    )
+    n = len(msg.edits)
+    summary = f"edited &middot; {n} earlier version" + ("" if n == 1 else "s")
+    return templates.edits.format(summary=summary, revisions=revisions)
+
+
 def make_message(
     msg: models.Message, fid: str, show_meta: bool, media_dir: Path | None
 ) -> str:
@@ -174,6 +196,7 @@ def make_message(
             meta=meta,
             quote="",
             body=templates.deleted,
+            edits="",
             reactions="",
         )
 
@@ -197,6 +220,7 @@ def make_message(
         meta=meta,
         quote=quote,
         body=make_body(msg, fid, media_dir),
+        edits=make_edits(msg),
         reactions=reactions,
     )
 

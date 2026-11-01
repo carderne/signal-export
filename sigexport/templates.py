@@ -62,7 +62,22 @@ message = """
     {meta}
     {quote}
     <div class=body>{body}</div>
+    {edits}
     {reactions}
+</div>
+"""
+
+edits = """
+<details class=edits>
+    <summary>{summary}</summary>
+    {revisions}
+</details>
+"""
+
+edit_revision = """
+<div class=revision>
+    <time class=revision-time datetime='{iso}' title='{date}'>{when}</time>
+    <div class=revision-body>{body}</div>
 </div>
 """
 

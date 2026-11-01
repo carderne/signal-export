@@ -2,6 +2,7 @@ import base64
 import hashlib
 import hmac
 import json
+import os
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -30,9 +31,7 @@ def _json_default(obj: object) -> str:
     """
     if isinstance(obj, bytes):
         return base64.b64encode(obj).decode("ascii")
-    raise TypeError(
-        f"Object of type {type(obj).__name__} is not JSON serializable"
-    )
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 
 def decrypt_attachment(
@@ -144,14 +143,35 @@ def get_attachments_from_db(
     return attachments
 
 
+def set_media_timestamp(path: Path, ts_ms: int) -> None:
+    """Set a file's modified/accessed time to the message timestamp (ms).
+
+    Signal strips date metadata from media, so photo libraries fall back to the
+    file's mtime; without this they'd all show the export date. Works for any
+    file type, unlike writing EXIF.
+    """
+    if ts_ms <= 0:
+        return
+    ts = ts_ms / 1000
+    try:
+        os.utime(path, (ts, ts))
+    except OSError as e:
+        log(f"\t\tCouldn't set timestamp on {path}: {e}")
+
+
 def copy_attachments(
     src: Path,
     dest: Path,
     convos: models.Convos,
     contacts: models.Contacts,
     cursor: dbapi2.Cursor,
+    set_timestamps: bool = True,
 ) -> None:
-    """Copy attachments and reorganise in destination directory."""
+    """Copy attachments and reorganise in destination directory.
+
+    When `set_timestamps` is set (the default), each written file's mtime is
+    set to the message's timestamp (see `set_media_timestamp`).
+    """
     src_root = Path(src) / "attachments.noindex"
     dest = Path(dest)
 
@@ -219,9 +239,11 @@ def copy_attachments(
                         continue
                     src_path = src_root / att_path
                     dst_path = dst_root / att["fileName"]
+                    wrote = False
                     if int(att.get("version", 0)) >= 2:
                         try:
                             decrypt_attachment(att, src_path, dst_path)
+                            wrote = True
                         except ValueError as e:
                             secho(
                                 f"Failed to decrypt {src_path} error {e}, skipping",
@@ -230,6 +252,7 @@ def copy_attachments(
                     else:
                         try:
                             shutil.copy2(src_path, dst_path)
+                            wrote = True
                         except FileNotFoundError:
                             secho(
                                 f"No file to copy at {src_path}, skipping!",
@@ -240,6 +263,8 @@ def copy_attachments(
                                 f"Error copying file {src_path}, skipping!\n{exc}",
                                 fg=colors.MAGENTA,
                             )
+                    if wrote and set_timestamps:
+                        set_media_timestamp(dst_path, msg.get_ts())
             else:
                 msg.attachments = []
 

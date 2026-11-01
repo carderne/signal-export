@@ -77,6 +77,14 @@ def main(
     attachments: bool = Option(
         True, "--attachments/--no-attachments", help="Whether to copy attachments"
     ),
+    use_message_timestamps: bool = Option(
+        True,
+        "--use-message-timestamps/--no-use-message-timestamps",
+        help="Set each exported media file's modified time to the message's "
+        "timestamp, so photo libraries date them correctly (Signal strips the "
+        "original date metadata). On by default; --no-use-message-timestamps "
+        "keeps the export time",
+    ),
     nicknames: bool = Option(
         False,
         "--nicknames/--no-nicknames",
@@ -178,7 +186,14 @@ def main(
 
     if attachments:
         secho("Copying and renaming attachments")
-        files.copy_attachments(source_dir, dest, convos, contacts, cursor)
+        files.copy_attachments(
+            source_dir,
+            dest,
+            convos,
+            contacts,
+            cursor,
+            set_timestamps=use_message_timestamps,
+        )
 
     if json_output and old:
         secho(

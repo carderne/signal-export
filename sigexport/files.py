@@ -35,10 +35,9 @@ def _json_default(obj: object) -> str:
     )
 
 
-def decrypt_attachment(
-    att: dict[str, str], src_path: Path, dst_path: Path, detect_file_type: bool = False
-) -> None:
-    """Decrypt attachment and save to `dst_path`.
+def decrypt_attachment_data(att: dict[str, str], src_path: Path) -> bytes:
+    """Decrypt a v2 (locally encrypted) attachment and return its plaintext,
+    trimmed to the attachment's size.
 
     Code adapted from:
         https://github.com/tbvdm/sigtop
@@ -87,10 +86,19 @@ def decrypt_attachment(
     if len(decrypted_data) < int(att["size"]):
         raise ValueError("Invalid attachment data length")
 
+    return decrypted_data[: int(att["size"])]
+
+
+def decrypt_attachment(
+    att: dict[str, str], src_path: Path, dst_path: Path, detect_file_type: bool = False
+) -> None:
+    """Decrypt attachment and save to `dst_path`."""
+    data_decrypted = decrypt_attachment_data(att, src_path)
+
     dst_path_str = str(dst_path)
     if detect_file_type:
         try:
-            ext = filetype.guess_extension(decrypted_data)
+            ext = filetype.guess_extension(data_decrypted)
         except TypeError:
             raise ValueError("Unsupported attachment file type")
         if ext is None:
@@ -98,7 +106,6 @@ def decrypt_attachment(
 
         dst_path_str += "." + ext
 
-    data_decrypted = decrypted_data[: int(att["size"])]
     with open(dst_path_str, "wb") as fp:
         fp.write(data_decrypted)
 

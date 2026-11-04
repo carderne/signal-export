@@ -126,3 +126,54 @@ def test_decrypt_attachment_rejects_undetectable_type(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError):
         files.decrypt_attachment(att, src_path, dst_path, detect_file_type=True)
+
+
+def test_decrypt_attachment_checks_the_plaintext_hash(tmp_path: Path) -> None:
+    src_path = tmp_path / "encrypted"
+    att = write_encrypted_attachment(src_path, b"attachment data")
+    att["plaintextHash"] = hashlib.sha256(b"attachment data").hexdigest()
+    dst_path = tmp_path / "decrypted"
+
+    files.decrypt_attachment(att, src_path, dst_path)
+
+    assert dst_path.read_bytes() == b"attachment data"
+
+
+def test_decrypt_attachment_rejects_a_plaintext_hash_mismatch(tmp_path: Path) -> None:
+    """A wrong plaintext under a valid MAC (a mixed-up path or key) is not exported."""
+    src_path = tmp_path / "encrypted"
+    att = write_encrypted_attachment(src_path, b"attachment data")
+    att["plaintextHash"] = hashlib.sha256(b"something else").hexdigest()
+    dst_path = tmp_path / "decrypted"
+
+    with pytest.raises(ValueError, match="Plaintext hash mismatch"):
+        files.decrypt_attachment(att, src_path, dst_path)
+    assert not dst_path.exists()
+
+
+def test_get_attachments_from_db_reads_the_plaintext_hash() -> None:
+    con = dbapi2.connect(":memory:")
+    cur = con.cursor()
+    cur.execute(
+        "CREATE TABLE message_attachments (messageId, editHistoryIndex, attachmentType, "
+        "orderInMessage, size, contentType, path, fileName, localKey, version, pending, plaintextHash)"
+    )
+    cur.execute(
+        "INSERT INTO message_attachments VALUES ('m1', -1, 'attachment', 0, 15, 'text/plain', "
+        "'ab/cd', 'a.txt', 'k', 2, 0, 'abc123')"
+    )
+    assert files.get_attachments_from_db(cur, "m1")[0]["plaintextHash"] == "abc123"
+
+
+def test_get_attachments_from_db_without_a_plaintext_hash_column() -> None:
+    con = dbapi2.connect(":memory:")
+    cur = con.cursor()
+    cur.execute(
+        "CREATE TABLE message_attachments (messageId, editHistoryIndex, attachmentType, "
+        "orderInMessage, size, contentType, path, fileName, localKey, version, pending)"
+    )
+    cur.execute(
+        "INSERT INTO message_attachments VALUES ('m1', -1, 'attachment', 0, 15, 'text/plain', "
+        "'ab/cd', 'a.txt', 'k', 2, 0)"
+    )
+    assert files.get_attachments_from_db(cur, "m1")[0]["plaintextHash"] is None

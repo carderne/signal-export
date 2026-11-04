@@ -87,6 +87,16 @@ def decrypt_attachment(
     if len(decrypted_data) < int(att["size"]):
         raise ValueError("Invalid attachment data length")
 
+    data_decrypted = decrypted_data[: int(att["size"])]
+
+    # Signal records the SHA-256 of the plaintext; check the result against it.
+    expected_hash = att.get("plaintextHash")
+    if (
+        expected_hash
+        and hashlib.sha256(data_decrypted).hexdigest() != expected_hash.lower()
+    ):
+        raise ValueError("Plaintext hash mismatch")
+
     dst_path_str = str(dst_path)
     if detect_file_type:
         try:
@@ -98,7 +108,6 @@ def decrypt_attachment(
 
         dst_path_str += "." + ext
 
-    data_decrypted = decrypted_data[: int(att["size"])]
     with open(dst_path_str, "wb") as fp:
         fp.write(data_decrypted)
 
@@ -109,7 +118,9 @@ def get_attachments_from_db(
     """Retrieve attachments from the message_attachments table
     for DB version >= 1360
     """
-    query = """
+    cursor.execute("PRAGMA table_info(message_attachments)")
+    has_hash = any(row[1] == "plaintextHash" for row in cursor.fetchall())
+    query = f"""
     SELECT
         size,
         contentType,
@@ -117,14 +128,15 @@ def get_attachments_from_db(
         fileName,
         localKey,
         version,
-        pending
+        pending,
+        {"plaintextHash" if has_hash else "NULL"}
     FROM message_attachments
     WHERE
         messageId = ?
         AND editHistoryIndex = ?
         AND attachmentType = 'attachment'
     ORDER BY orderInMessage
-    """
+    """  # noqa: S608
 
     cursor.execute(query, (message_id, edit_history_index))
     attachments = []
@@ -138,6 +150,7 @@ def get_attachments_from_db(
             "localKey": row[4],
             "version": row[5] or 0,
             "pending": row[6],
+            "plaintextHash": row[7],
         }
         attachments.append(att)
 

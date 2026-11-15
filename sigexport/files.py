@@ -333,7 +333,17 @@ def copy_stickers(
 
             src_path = src_root / sticker_path
             dst_path = pck_path / str(sticker["id"])
-            decrypt_attachment(sticker, src_path, dst_path, True)
+            try:
+                decrypt_attachment(sticker, src_path, dst_path, True)
+            except ValueError as e:
+                # a sticker whose file isn't on disk (e.g. not downloaded)
+                # shouldn't abort the whole export; skip it, as copy_attachments
+                # already does for attachments
+                secho(
+                    f"Failed to export sticker {src_path}: {e}, skipping",
+                    fg=colors.MAGENTA,
+                )
+                continue
 
             sticker_packs[pack_id]["stickers"].append(sticker)
         js_path = pck_path / "data.json"

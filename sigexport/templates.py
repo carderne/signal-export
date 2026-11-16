@@ -17,6 +17,12 @@ html = """
 <body data-last-page='{last_page}'>
     <header class=topbar>
         <h1 class=chat-title>{name}</h1>
+        <div class=chatsearch>
+            <input class=searchbox type=search placeholder='Search this chat'
+                aria-label='Search this chat' autocomplete=off spellcheck=false>
+            <a class=searchall href='../search.html'>Search all chats</a>
+            <div class=searchresults role=listbox hidden></div>
+        </div>
         <div class=theme-switch role=group aria-label='Colour theme'>
             <button type=button data-theme-choice=auto aria-pressed=true>Auto</button>
             <button type=button data-theme-choice=light aria-pressed=false>Light</button>
@@ -58,7 +64,7 @@ pager_disabled = "<span class=step aria-hidden=true>{symbol}</span>"
 day = "<div class=day>{date}</div>"
 
 message = """
-<div class='{cl}'>
+<div class='{cl}' id='{mid}'>
     {meta}
     {quote}
     <div class=body>{body}</div>
@@ -78,7 +84,7 @@ quote = "<div class=quote>{text}</div>"
 deleted = "<em>This message was deleted</em>"
 
 event = """
-<div class='event {cls}'>
+<div class='event {cls}' id='{mid}'>
     <span class=event-icon aria-hidden=true>{icon}</span>
     <span>{text}</span>
     <time class=event-time datetime='{iso}' title='{date}'>{time}</time>

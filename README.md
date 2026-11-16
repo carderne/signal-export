@@ -22,6 +22,8 @@ Images are attached inline with `![name](path)` while other attachments (voice n
 
 This is converted to HTML at the end so it can be opened with any web browser. The HTML export is styled as a chat view with grouped messages, day dividers, reactions, and an image lightbox. It follows your browser/OS light or dark preference by default, and a switcher in the top bar lets you pin light or dark (remembered per browser).
 
+Each chat page has a search box for that conversation, and a `search.html` at the root of the export searches across every chat at once; clicking a result jumps straight to that message on the right page. Search runs entirely in your browser from the exported data, so it keeps working offline with no server.
+
 ## Usage with `uv`
 If you use [uv](https://docs.astral.sh/uv/), you can run signal-export without needing to install it:
 ```bash

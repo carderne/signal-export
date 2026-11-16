@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -179,3 +180,74 @@ def test_sentinel_attachment_renders_placeholder() -> None:
     out = html.create_html("Chat", [msg(body="here", attachments=[att])])
     assert "Media not exported" in out
     assert "<img" not in out
+
+
+def test_messages_carry_anchor_ids() -> None:
+    """Every bubble gets a stable id so search can jump straight to it."""
+    out = html.create_html("Chat", [msg(0), msg(1, sender="Bob")], msgs_per_page=5)
+    assert 'id="m0-0"' in out
+    assert 'id="m0-1"' in out
+
+
+def test_search_record_ids_match_rendered_anchors() -> None:
+    """The index id for a message is exactly the DOM id it's rendered with."""
+    messages = [msg(i) for i in range(7)]
+    out = html.create_html("Chat", messages, msgs_per_page=3)
+    records = html.search_records(messages, 3)
+    assert [r["id"] for r in records] == [
+        "m0-0",
+        "m0-1",
+        "m0-2",
+        "m1-0",
+        "m1-1",
+        "m1-2",
+        "m2-0",
+    ]
+    for r in records:
+        assert f'id="{r["id"]}"' in out
+
+
+def test_search_records_skip_deleted_and_empty() -> None:
+    """Deleted/blank bubbles are left out, but later ids stay aligned."""
+    messages = [
+        msg(0, body="keep me"),
+        msg(1, body="", deleted=True),
+        msg(2, body="   "),
+        msg(3, body="Missed voice call", call=True, missed=True),
+    ]
+    records = html.search_records(messages, 100)
+    assert {r["id"] for r in records} == {"m0-0", "m0-3"}
+    texts = [r["t"] for r in records]
+    assert "keep me" in texts
+    assert "Missed voice call" in texts
+
+
+def test_write_search_index_is_a_js_global(tmp_path: Path) -> None:
+    chats: list[dict[str, object]] = [
+        {
+            "folder": "Alice",
+            "title": "Alice",
+            "messages": [
+                {"id": "m0-0", "d": "2024-06-01T00:00:00", "s": "Alice", "t": "hi"}
+            ],
+        }
+    ]
+    html.write_search_index(tmp_path, chats)
+    content = (tmp_path / "search-index.js").read_text(encoding="utf-8")
+    assert content.startswith("window.SIGEXPORT_SEARCH = ")
+    payload = json.loads(content[len("window.SIGEXPORT_SEARCH = ") :].rstrip(";\n"))
+    assert payload["chats"][0]["messages"][0]["t"] == "hi"
+
+
+def test_write_search_index_keeps_unicode_readable(tmp_path: Path) -> None:
+    """Non-ASCII is written verbatim, not \\uXXXX, so search matches it."""
+    chats: list[dict[str, object]] = [
+        {
+            "folder": "C",
+            "title": "C",
+            "messages": [{"id": "m0-0", "d": "x", "s": "s", "t": "café ☕"}],
+        }
+    ]
+    html.write_search_index(tmp_path, chats)
+    content = (tmp_path / "search-index.js").read_text(encoding="utf-8")
+    assert "café ☕" in content

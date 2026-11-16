@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import shutil
@@ -14,7 +15,9 @@ from typer import secho
 from sigexport import models, templates
 from sigexport.logging import log
 
-ASSETS = ("style.css", "chat.js")
+# style.css and chat.js are shared by every chat page; search.html and search.js
+# are the standalone cross-chat search viewer at the export root.
+ASSETS = ("style.css", "chat.js", "search.html", "search.js")
 
 # messages closer together than this from the same sender get grouped
 GROUP_WINDOW = timedelta(minutes=5)
@@ -22,6 +25,15 @@ GROUP_WINDOW = timedelta(minutes=5)
 # body is already HTML here, so stop at '<' to avoid swallowing the tags
 # Markdown emitted (e.g. a trailing </p>) into the href (see #225)
 URL_PATTERN = re.compile(r"(https{0,1}://[^\s<]*)")
+
+
+def anchor(page_num: int, idx: int) -> str:
+    """Stable DOM id for a message: page number and position within the page.
+
+    Shared by the rendered pages and the search index so a search result can
+    link straight to ``index.html#m<page>-<idx>`` and land on the right page.
+    """
+    return f"m{page_num}-{idx}"
 
 # label and icon for each kind of attachment we couldn't include in the export
 MISSING_LABELS = {
@@ -147,6 +159,7 @@ def make_message(
         icon = "\U0001f4f9" if "video" in msg.body.lower() else "\U0001f4de"
         return templates.event.format(
             cls=cls,
+            mid=fid,
             icon=icon,
             text=escape(msg.body.strip()),
             iso=msg.date.isoformat(),
@@ -171,6 +184,7 @@ def make_message(
     if msg.deleted:
         return templates.message.format(
             cl=cl + " deleted",
+            mid=fid,
             meta=meta,
             quote="",
             body=templates.deleted,
@@ -194,6 +208,7 @@ def make_message(
 
     return templates.message.format(
         cl=cl,
+        mid=fid,
         meta=meta,
         quote=quote,
         body=make_body(msg, fid, media_dir),
@@ -237,7 +252,7 @@ def create_html(
                 and msg.date - prev.date < GROUP_WINDOW
             )
             content += make_message(
-                msg, f"m{page_num}-{i}", show_meta=not grouped, media_dir=media_dir
+                msg, anchor(page_num, i), show_meta=not grouped, media_dir=media_dir
             )
             # a call is an event, not a bubble, so don't group the next msg onto it
             prev = None if msg.call else msg
@@ -258,3 +273,54 @@ def create_html(
     ht_text = BeautifulSoup(ht_text, "html.parser").prettify()
     ht_text = re.compile(r"^(\s*)", re.MULTILINE).sub(r"\1\1\1\1", ht_text)
     return ht_text
+
+
+def _searchable_text(msg: models.Message) -> str:
+    """The plain text of a message that cross-chat search should match on.
+
+    Deleted messages have no recoverable content, so they're left out of the
+    index entirely rather than indexed as the "deleted" placeholder.
+    """
+    if msg.deleted:
+        return ""
+    return (msg.body or "").strip()
+
+
+def search_records(
+    messages: list[models.Message], msgs_per_page: int
+) -> list[dict[str, str]]:
+    """Build the per-message search records for one chat.
+
+    The ``id`` matches the DOM id ``create_html`` gives the same message (same
+    pagination), so a search hit links to ``index.html#<id>`` and lands on it.
+    Messages with no searchable text (empty/attachment-only, deleted) are
+    skipped to keep the index small.
+    """
+    records: list[dict[str, str]] = []
+    for g, msg in enumerate(messages):
+        text = _searchable_text(msg)
+        if not text:
+            continue
+        page_num, idx = divmod(g, msgs_per_page)
+        records.append(
+            {
+                "id": anchor(page_num, idx),
+                "d": msg.date.isoformat(),
+                "s": msg.sender,
+                "t": text,
+            }
+        )
+    return records
+
+
+def write_search_index(dest: Path, chats: list[dict[str, object]]) -> None:
+    """Write the cross-chat search index as a JS global at the export root.
+
+    Delivered as a ``<script src>`` global rather than via ``fetch`` so that
+    ``search.html`` works when opened straight off disk. Browsers block
+    ``file://`` fetches, but not script tags.
+    """
+    payload = {"chats": chats}
+    data = json.dumps(payload, ensure_ascii=False)
+    out = f"window.SIGEXPORT_SEARCH = {data};\n"
+    (dest / "search-index.js").write_text(out, encoding="utf-8")

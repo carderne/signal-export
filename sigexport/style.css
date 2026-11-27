@@ -12,6 +12,7 @@
     --muted: light-dark(#5f6672, #99a1ac);
     --border: light-dark(#dfe2e7, #30353c);
     --accent: light-dark(#2b6cee, #85aaff);
+    --accent-soft: light-dark(rgba(43, 108, 238, 0.22), rgba(133, 170, 255, 0.26));
 
     --bubble-in: light-dark(#ffffff, #22262c);
     --bubble-in-border: light-dark(#e2e5ea, #30353c);
@@ -121,6 +122,207 @@ html:not(.js) .theme-switch {
     box-shadow: var(--shadow);
 }
 
+/* ---------- search ---------- */
+
+/* The in-chat search needs JS, so it stays hidden until JS says hello. */
+.chatsearch {
+    display: none;
+    position: relative;
+    flex: 0 1 320px;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+html.js .chatsearch {
+    display: flex;
+}
+
+.searchbox {
+    font: inherit;
+    width: 100%;
+    min-width: 0;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background-color: var(--surface);
+    color: var(--text);
+}
+
+.searchbox:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+.searchall {
+    flex: none;
+    font-size: 0.78rem;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.searchresults {
+    position: absolute;
+    top: calc(100% + 0.4rem);
+    right: 0;
+    width: min(420px, 85vw);
+    max-height: 70vh;
+    overflow-y: auto;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    z-index: 40;
+}
+
+.searchitem {
+    display: block;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    padding: 0.5rem 0.75rem;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    background: none;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.searchitem:last-child {
+    border-bottom: 0;
+}
+
+.searchitem:hover,
+.searchitem:focus {
+    background-color: var(--surface-2);
+    outline: none;
+}
+
+.searchitem-meta {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 0.1rem;
+}
+
+.searchitem-text {
+    display: block;
+    font-size: 0.85rem;
+    line-height: 1.35;
+}
+
+.searchnone {
+    padding: 0.6rem 0.75rem;
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+mark {
+    background-color: var(--accent-soft);
+    color: inherit;
+    border-radius: 3px;
+    padding: 0 1px;
+}
+
+/* ---------- global search page ---------- */
+
+.searchpage {
+    max-width: 760px;
+}
+
+.searchpanel {
+    margin: 0.5rem 0 1.25rem;
+}
+
+.searchpage #globalsearch {
+    width: 100%;
+    font-size: 1.05rem;
+    padding: 0.7rem 1rem;
+    border-radius: 12px;
+}
+
+.searchhint {
+    margin: 0.6rem 0.2rem 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+.globalresults {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.gresult-count {
+    color: var(--muted);
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+}
+
+.gresult {
+    display: block;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background-color: var(--surface);
+    color: var(--text);
+}
+
+.gresult:hover,
+.gresult:focus {
+    border-color: var(--accent);
+    text-decoration: none;
+    outline: none;
+}
+
+.gresult-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.gresult-chat {
+    font-weight: 600;
+}
+
+.gresult-sub {
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+.gresult-text {
+    display: block;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+/* On narrow screens the search drops to its own full-width row so the
+   chat title and theme switch keep their space. */
+@media (max-width: 560px) {
+    .topbar {
+        flex-wrap: wrap;
+    }
+
+    .searchall {
+        display: none;
+    }
+
+    .theme-switch {
+        order: 1;
+    }
+
+    html.js .chatsearch {
+        order: 2;
+        flex: 1 1 100%;
+    }
+
+    .searchresults {
+        width: 100%;
+    }
+}
+
 /* ---------- pages ---------- */
 
 main {
@@ -133,13 +335,44 @@ main {
     display: none;
 }
 
-.page:target {
+/* A page is shown when it is the target (#pgN), when it contains the
+   targeted message (#m2-7, so search jumps reveal the right page), or
+   when JS forces it open as a :has() fallback for old browsers. */
+.page:target,
+.page:has(:target),
+.page.show {
     display: block;
 }
 
 /* No hash yet (fresh open, no JS): show the first page. */
-body:not(:has(.page:target)) main > .page:first-child {
+body:not(:has(:target)) main > .page:first-child {
     display: block;
+}
+
+/* Briefly flag the message a search result jumped to. */
+.msg:target,
+.event:target,
+.flash {
+    animation: flash 2s ease-out 1;
+}
+
+@keyframes flash {
+    from {
+        background-color: var(--accent-soft, rgba(60, 120, 230, 0.28));
+    }
+    to {
+        background-color: transparent;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .msg:target,
+    .event:target,
+    .flash {
+        animation: none;
+        outline: 2px solid var(--accent, #3c78e6);
+        outline-offset: 2px;
+    }
 }
 
 .pager {

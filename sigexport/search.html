@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang='en'>
+<head>
+    <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <title>Search - signal-export</title>
+    <link rel=stylesheet href='style.css'>
+    <script src='chat.js'></script>
+</head>
+<body data-last-page='0'>
+    <header class=topbar>
+        <h1 class=chat-title>Search all chats</h1>
+        <div class=theme-switch role=group aria-label='Colour theme'>
+            <button type=button data-theme-choice=auto aria-pressed=true>Auto</button>
+            <button type=button data-theme-choice=light aria-pressed=false>Light</button>
+            <button type=button data-theme-choice=dark aria-pressed=false>Dark</button>
+        </div>
+    </header>
+    <main class=searchpage>
+        <div class=searchpanel>
+            <input id=globalsearch class=searchbox type=search autofocus
+                placeholder='Search all conversations'
+                aria-label='Search all conversations' autocomplete=off
+                spellcheck=false>
+            <p class=searchhint id=searchhint>Type to search across every exported chat.</p>
+        </div>
+        <div id=globalresults class=globalresults role=listbox></div>
+    </main>
+    <script src='search-index.js'></script>
+    <script src='search.js'></script>
+</body>
+</html>

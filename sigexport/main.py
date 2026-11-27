@@ -199,6 +199,7 @@ def main(
 
     if html_output:
         html.prep_html(dest)
+    search_chats: list[dict[str, object]] = []
     for key, messages in chat_dict.items():
         name = contacts[key].name
         # some contact names are None
@@ -207,6 +208,13 @@ def main(
 
         # `name` is the (unique) folder; `title` is the human name for display
         title = contacts[key].display or name
+
+        if html_output:
+            records = html.search_records(messages, paginate)
+            if records:
+                search_chats.append(
+                    {"folder": name, "title": title, "messages": records}
+                )
 
         (dest / name).mkdir(parents=True, exist_ok=True)
         md_path = dest / name / "chat.md"
@@ -240,6 +248,9 @@ def main(
                 js_f.close()
             if ht_f:
                 ht_f.close()
+
+    if html_output:
+        html.write_search_index(dest, search_chats)
 
     secho("Done!", fg=colors.GREEN)
 

@@ -28,6 +28,9 @@ PASSWORD_CMD_DARWIN = [
     "Signal Safe Storage",
 ]
 PASSWORD_CMD_GNOME = ["secret-tool", "lookup", "application", "Signal"]
+# Chromium's OSCrypt (which Electron's safeStorage uses) encrypts with this fixed
+# password, under the "v10" prefix, when Linux has no keyring ("basic_text").
+LINUX_BASIC_PASSWORD = "peanuts"  # noqa: S105
 PASSWORD_CMD_KDE = [
     "kwallet-query",
     "kdewallet",
@@ -109,6 +112,9 @@ def get_key(appdir: Path, password: str | None) -> str | None:
         else:  # linux
             if password:
                 return decrypt(password, encrypted_key, b"v11", 1)
+            elif bytes.fromhex(encrypted_key).startswith(b"v10"):
+                # no keyring: the "basic_text" backend
+                return decrypt(LINUX_BASIC_PASSWORD, encrypted_key, b"v10", 1)
             elif "safeStorageBackend" in data:
                 if data["safeStorageBackend"] == "gnome_libsecret":
                     pw = get_password(PASSWORD_CMD_GNOME, "gnome")  # may raise error
@@ -178,7 +184,7 @@ def get_password(cmd: list[str], system: str) -> str:
         secho("If you have found your password, please rerun sigexport as follows:")
         secho("sigexport --password=PASSWORD_FROM_COMMAND ...", fg=colors.BLUE)
         secho("No Signal decryption key found", fg=colors.RED)
-        raise
+        raise RuntimeError(f"{cmd[0]} exited with status {p.returncode}")
     pw = p.stdout
     return pw.strip()
 
@@ -186,7 +192,9 @@ def get_password(cmd: list[str], system: str) -> str:
 def decrypt(password: str, encrypted_key: str, prefix: bytes, iterations: int) -> str:
     encrypted_key_b = bytes.fromhex(encrypted_key)
     if not encrypted_key_b.startswith(prefix):
-        raise
+        raise ValueError(
+            f"Encrypted key starts with {encrypted_key_b[:3]!r}, expected {prefix!r}"
+        )
     encrypted_key_b = encrypted_key_b[len(prefix) :]
 
     salt = b"saltysalt"

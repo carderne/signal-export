@@ -126,3 +126,69 @@ def test_decrypt_attachment_rejects_undetectable_type(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError):
         files.decrypt_attachment(att, src_path, dst_path, detect_file_type=True)
+
+
+def _sticker_cursor(stickers: list[dict]) -> dbapi2.Cursor:
+    """In-memory stand-in for the Signal sticker tables with one pack."""
+    connection = dbapi2.connect(":memory:")
+    cursor = connection.cursor()
+    cursor.execute(
+        "CREATE TABLE sticker_packs (id, key, author, coverStickerId, createdAt, "
+        "downloadAttempts, installedAt, lastUsed, status, stickerCount, title, "
+        "attemptedStatus, position, storageID, storageVersion, "
+        "storageUnknownFields, storageNeedsSync)"
+    )
+    cursor.execute(
+        "CREATE TABLE stickers (id, packId, emoji, height, isCoverOnly, lastUsed, "
+        "path, width, version, localKey, size)"
+    )
+    cursor.execute("INSERT INTO sticker_packs (id, stickerCount) VALUES ('pack1', ?)", (len(stickers),))
+    for s in stickers:
+        cursor.execute(
+            "INSERT INTO stickers (id, packId, path, version, localKey, size) "
+            "VALUES (?, 'pack1', ?, ?, ?, ?)",
+            (s["id"], s["path"], s.get("version", 0), s.get("localKey", ""), s.get("size", 0)),
+        )
+    connection.commit()
+    return cursor
+
+
+def test_copy_stickers_skips_missing_file(tmp_path: Path) -> None:
+    """A sticker whose file isn't on disk must not abort the export (#240)."""
+    source = tmp_path / "source"
+    (source / "stickers.noindex").mkdir(parents=True)
+    destination = tmp_path / "export"
+
+    cursor = _sticker_cursor([{"id": 0, "path": "50/missingfile"}])
+    files.copy_stickers(cursor, source, destination)  # must not raise
+
+    pack = destination / "exported_stickers" / "pack1"
+    assert (pack / "data.json").is_file()  # pack still written
+    assert not (pack / "0").exists()  # the missing sticker wasn't exported
+
+
+def test_copy_stickers_missing_does_not_block_present(tmp_path: Path) -> None:
+    """A missing sticker must not stop a later, present one from exporting."""
+    source = tmp_path / "source"
+    good_dir = source / "stickers.noindex" / "aa"
+    good_dir.mkdir(parents=True)
+    att = write_encrypted_attachment(good_dir / "good", PNG)
+    destination = tmp_path / "export"
+
+    cursor = _sticker_cursor(
+        [
+            {"id": 0, "path": "50/missingfile"},  # processed first (ORDER BY id)
+            {
+                "id": 1,
+                "path": "aa/good",
+                "localKey": att["localKey"],
+                "size": att["size"],
+                "version": att["version"],
+            },
+        ]
+    )
+    files.copy_stickers(cursor, source, destination)
+
+    pack = destination / "exported_stickers" / "pack1"
+    assert not (pack / "0").exists()  # missing skipped
+    assert (pack / "1.png").read_bytes() == PNG  # present still exported

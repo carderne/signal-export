@@ -36,7 +36,7 @@ dependencies = [
     "emoji~=2.0",
     "Markdown>=3.8.1,<4",
     "typer>=0.16.0",
-    "pycryptodome~=3.20",
+    "pycryptodome>=3.20,<5",
     "sqlcipher3-wheels>=0.5.4",
     "filetype>=1.2.0",
 ]

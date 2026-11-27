@@ -7,7 +7,7 @@ from pathlib import Path
 from sqlcipher3 import dbapi2
 from typer import Exit, colors, secho
 
-from sigexport import crypto, models, utils
+from sigexport import crypto, files, models, utils
 from sigexport.logging import log
 
 
@@ -58,6 +58,43 @@ def _load_call_directions(c: dbapi2.Cursor) -> dict[str, dict]:
         raise Exit(1) from e
 
     return call_directions
+
+
+def _load_long_message_texts(source_dir: Path, c: dbapi2.Cursor) -> dict[str, str]:
+    """Full text of long messages, by message id.
+
+    Signal Desktop keeps only the first ~2 KB of a long message in `body`; the
+    whole text is stored as a 'long-message' attachment, which newer databases
+    keep in the message_attachments table.
+    """
+    c.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'message_attachments'"
+    )
+    if c.fetchone() is None:
+        return {}
+    c.execute(
+        """SELECT messageId, path, localKey, size, version
+        FROM message_attachments
+        WHERE attachmentType = 'long-message' AND editHistoryIndex = -1"""
+    )
+    root = source_dir / "attachments.noindex"
+    texts: dict[str, str] = {}
+    for message_id, path, local_key, size, version in c.fetchall():
+        if not path:
+            continue
+        src_path = root / str(path).replace("\\", "/")
+        try:
+            if int(version or 0) >= 2:
+                text = files.decrypt_attachment_data(
+                    {"localKey": local_key, "size": size}, src_path
+                )
+            else:
+                text = src_path.read_bytes()
+        except (OSError, ValueError) as e:
+            log(f"\tLong message text unreadable for {message_id}: {e}")
+            continue
+        texts[message_id] = text.decode("utf-8", errors="replace")
+    return texts
 
 
 def fetch_data(
@@ -207,6 +244,12 @@ def fetch_data(
             )
 
             convos[cid].append(con)
+
+    long_texts = _load_long_message_texts(source_dir, c)
+    for messages in convos.values():
+        for msg in messages:
+            if msg.id in long_texts:
+                msg.body = long_texts[msg.id]
 
     if not include_empty:
         convos = {key: val for key, val in convos.items() if len(val) > 0}
